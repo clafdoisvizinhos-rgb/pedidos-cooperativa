@@ -28,11 +28,12 @@
 
     <div class="max-w-[360px] mx-auto bg-white min-h-screen shadow-xl border-x border-gray-200">
         
-        <!-- Cabeçalho -->
-        <div class="bg-green-700 p-4 text-white text-center shadow-sm">
-            <h1 class="text-2xl font-black uppercase tracking-tighter italic">Cooperativa<br>Familiar</h1>
-            <div class="mt-1 h-1 w-12 bg-yellow-400 mx-auto"></div>
-            <p class="text-[8px] font-bold opacity-90 mt-1 uppercase tracking-widest">Sistema de Entrega</p>
+        <!-- Cabeçalho Atualizado -->
+        <div class="bg-green-700 p-6 text-white text-center shadow-sm">
+            <h1 class="text-xl font-bold uppercase tracking-tight italic opacity-90">Cooperativa</h1>
+            <h2 class="text-5xl font-black uppercase tracking-tighter text-yellow-400 -mt-1">CLAF</h2>
+            <div class="mt-2 h-1 w-16 bg-white mx-auto opacity-50"></div>
+            <p class="text-[9px] font-bold opacity-80 mt-2 uppercase tracking-widest">Sistema de Entrega</p>
         </div>
 
         <form id="meuFormulario" class="p-3 space-y-4">
@@ -79,7 +80,7 @@
     <!-- Template invisível para o PDF -->
     <div id="conteudoPdfExport" class="p-8 bg-white fonte-cupom" style="width: 400px; display: none;">
         <div style="text-align: center; border-bottom: 2px dashed #000; padding-bottom: 10px; margin-bottom: 10px;">
-            <h2 style="margin: 0; font-size: 20px;">COOPERATIVA FAMILIAR</h2>
+            <h2 style="margin: 0; font-size: 24px;">COOPERATIVA CLAF</h2>
             <p style="margin: 0; font-size: 12px;">RECIBO DE PEDIDO</p>
         </div>
         <p style="font-size: 14px; margin: 5px 0;"><strong>PRODUTOR:</strong> <span id="pdfNome"></span></p>
@@ -175,7 +176,7 @@
 
         form.addEventListener('submit', async function(e) {
             e.preventDefault();
-            const URL_DO_SCRIPT = "https://script.google.com/macros/s/AKfycbx19U31H_e9s9hMjQSTlz1-LNJAzq2QulTI3ynKTPLYplDl_R4miKZ9V9WeckMRRhRp/exec";
+            const URL_DO_SCRIPT = "https://script.google.com/macros/s/AKfycbwj9Pw6zH5ZVKVjqS5eomVO6kHSZUbtNmcVr6DeA8EmISvqmyTNtwuo-MWlwrdFCl17/exec";
 
             btn.disabled = true;
             btn.innerHTML = `<span class="animate-pulse text-sm">GERANDO PDF E ENVIANDO...</span>`;
@@ -193,14 +194,12 @@
                 }
             });
 
-            // 1. Gera e salva o PDF no dispositivo
             try {
                 await gerarESalvarPDF(formData.get('nome'), formData.get('data'), itensParaPdf);
             } catch (err) {
                 console.error("Erro ao gerar PDF local:", err);
             }
 
-            // 2. Envia para o Planilha Google
             fetch(URL_DO_SCRIPT, {
                 method: 'POST',
                 body: params
