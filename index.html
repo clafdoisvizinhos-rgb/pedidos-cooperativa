@@ -21,16 +21,14 @@
         .btn-shadow { box-shadow: 0 4px 0 rgb(21, 128, 61); }
         .btn-shadow:active { box-shadow: none; transform: translateY(2px); }
 
-        /* Ajuste do Wrapper do PDF para garantir renderização estável em mobile */
+        /* NOVO MÉTODO DE ESCONDER: Fora da tela mas 'visível' para o motor do browser */
         #wrapper-pdf {
-            position: absolute;
+            position: fixed;
             top: 0;
-            left: 0;
+            left: -1000px; /* Move para longe sem usar opacidade */
             width: 300px;
             background: white;
-            z-index: -100;
-            opacity: 0;
-            pointer-events: none;
+            z-index: -1;
         }
     </style>
 </head>
@@ -80,7 +78,7 @@
         </form>
     </div>
 
-    <!-- ÁREA DO PDF - Otimizada para Impressora Térmica (80mm) -->
+    <!-- ÁREA DO PDF -->
     <div id="wrapper-pdf">
         <div id="conteudoPdfExport" class="p-4 fonte-cupom" style="background: white; color: black; width: 300px; font-size: 13px; display: block;">
             <div style="text-align: center; border-bottom: 2px dashed black; padding-bottom: 10px; margin-bottom: 10px;">
@@ -108,7 +106,7 @@
             <div style="margin-top: 15px; border-top: 2px dashed black; padding-top: 10px; text-align: center;">
                 <p style="font-size: 9px; margin: 0; color: black;">Emitido em: <span id="pdfTimestamp"></span></p>
                 <p style="font-size: 12px; font-weight: bold; margin-top: 5px; color: black;">Cooperativa CLAF agradece!</p>
-                <div style="height: 60px;"></div> <!-- Espaço extra para o corte da impressora -->
+                <div style="height: 60px;"></div>
                 <p style="font-size: 8px; color: transparent;">.</p>
             </div>
         </div>
@@ -152,57 +150,55 @@
         });
 
         async function gerarPDF(nome, data, itens) {
+            const wrapper = document.getElementById('wrapper-pdf');
             const element = document.getElementById('conteudoPdfExport');
             const pdfItensTbody = document.getElementById('pdfItens');
             
-            // 1. Limpeza rigorosa e preenchimento de metadados
+            // Força o elemento a estar no viewport (mesmo que atrás de outros)
+            wrapper.style.left = "0px";
+            wrapper.style.zIndex = "999"; 
+
             document.getElementById('pdfNome').innerText = nome.toUpperCase();
             document.getElementById('pdfData').innerText = data;
             document.getElementById('pdfTimestamp').innerText = new Date().toLocaleString('pt-PT');
             pdfItensTbody.innerHTML = "";
             
-            // 2. Criação manual de elementos para garantir renderização imediata
             itens.forEach(i => {
                 const tr = document.createElement('tr');
                 tr.style.borderBottom = "1px solid #eee";
-                
-                const tdNome = document.createElement('td');
-                tdNome.style.padding = "7px 0";
-                tdNome.style.textAlign = "left";
-                tdNome.style.fontWeight = "bold";
-                tdNome.textContent = i.nome;
-                
-                const tdQtd = document.createElement('td');
-                tdQtd.style.padding = "7px 0";
-                tdQtd.style.textAlign = "right";
-                tdQtd.style.fontWeight = "bold";
-                tdQtd.textContent = i.qtd;
-                
-                tr.appendChild(tdNome);
-                tr.appendChild(tdQtd);
+                tr.innerHTML = `<td style="padding: 7px 0; text-align: left; font-weight: bold;">${i.nome}</td><td style="padding: 7px 0; text-align: right; font-weight: bold;">${i.qtd}</td>`;
                 pdfItensTbody.appendChild(tr);
             });
 
-            // 3. Pequeno delay para o DOM respirar (essencial em mobile)
-            await new Promise(resolve => setTimeout(resolve, 500));
+            // Delay essencial para celulares "acordarem" e renderizarem o novo conteúdo
+            await new Promise(resolve => setTimeout(resolve, 800));
 
             const opt = {
                 margin: 0,
                 filename: `Pedido_${nome.replace(/\s+/g, '_')}.pdf`,
                 image: { type: 'jpeg', quality: 0.98 },
                 html2canvas: { 
-                    scale: 2, // Scale 2 é mais estável em telemóveis com pouca RAM
+                    scale: 2,
                     backgroundColor: "#ffffff",
                     useCORS: true,
                     logging: false,
-                    letterRendering: true,
-                    allowTaint: false
+                    onclone: (clonedDoc) => {
+                        // Garante que no clone o elemento esteja visível
+                        const pdfContent = clonedDoc.getElementById('conteudoPdfExport');
+                        pdfContent.style.display = 'block';
+                        pdfContent.style.visibility = 'visible';
+                    }
                 },
-                jsPDF: { unit: 'mm', format: [80, 297], orientation: 'portrait' }
+                jsPDF: { unit: 'mm', format: [80, 300], orientation: 'portrait' }
             };
 
-            // 4. Execução do PDF
-            return html2pdf().set(opt).from(element).save();
+            try {
+                await html2pdf().set(opt).from(element).save();
+            } finally {
+                // Devolve para a "escuridão"
+                wrapper.style.left = "-1000px";
+                wrapper.style.zIndex = "-1";
+            }
         }
 
         document.getElementById('meuFormulario').addEventListener('submit', async function(e) {
@@ -231,21 +227,19 @@
             btn.innerHTML = `<span class="animate-pulse">A GERAR PDF...</span>`;
 
             try {
-                // Passo 1: Enviar para a Planilha (Background)
+                // Envio em background
                 fetch("https://script.google.com/macros/s/AKfycbwj9Pw6zH5ZVKVjqS5eomVO6kHSZUbtNmcVr6DeA8EmISvqmyTNtwuo-MWlwrdFCl17/exec", {
                     method: 'POST',
                     body: params
-                }).catch(e => console.log("Erro planilha (ignorado):", e));
+                }).catch(() => {});
 
-                // Passo 2: Gerar PDF (Com o novo método mais estável)
+                // PDF com nova estratégia de visibilidade
                 await gerarPDF(formData.get('nome'), formData.get('data'), itens);
 
-                // Passo 3: Feedback
                 document.getElementById('modalSucesso').classList.remove('hidden');
                 document.getElementById('modalSucesso').classList.add('flex');
             } catch (err) {
-                console.error(err);
-                alert("Erro ao processar o PDF. Tente novamente.");
+                alert("Erro ao processar. Tente novamente.");
             } finally {
                 btn.disabled = false;
                 btn.innerHTML = `<span>ENVIAR E SALVAR PDF</span><span class="text-xl">➔</span>`;
