@@ -20,13 +20,15 @@
         .btn-shadow:active { box-shadow: none; transform: translateY(2px); }
         .item-row td { padding-top: 0.25rem !important; padding-bottom: 0.25rem !important; }
         
-        /* Estilos específicos para garantir que o PDF não saia em branco */
+        /* Ajuste para evitar PDF em branco */
         #conteudoPdfExport {
-            position: absolute;
-            left: -9999px;
+            position: fixed;
             top: 0;
+            left: 0;
+            width: 100%;
+            z-index: -100;
             background: white;
-            width: 400px;
+            visibility: hidden;
         }
     </style>
 </head>
@@ -83,27 +85,27 @@
         </form>
     </div>
 
-    <!-- Template para o PDF (Posicionado fora da tela mas visível para o script) -->
-    <div id="conteudoPdfExport" class="p-8 fonte-cupom">
+    <!-- Template para o PDF (Garantido fundo branco e texto preto) -->
+    <div id="conteudoPdfExport" class="p-10 fonte-cupom" style="background-color: white !important; color: black !important;">
         <div style="text-align: center; border-bottom: 2px dashed #000; padding-bottom: 10px; margin-bottom: 10px;">
-            <h2 style="margin: 0; font-size: 24px; color: black;">COOPERATIVA CLAF</h2>
-            <p style="margin: 0; font-size: 12px; color: black;">RECIBO DE PEDIDO</p>
+            <h2 style="margin: 0; font-size: 24px; color: black !important;">COOPERATIVA CLAF</h2>
+            <p style="margin: 0; font-size: 12px; color: black !important;">RECIBO DE PEDIDO</p>
         </div>
-        <p style="font-size: 14px; margin: 5px 0; color: black;"><strong>PRODUTOR:</strong> <span id="pdfNome"></span></p>
-        <p style="font-size: 14px; margin: 5px 0; color: black;"><strong>DATA:</strong> <span id="pdfData"></span></p>
-        <div style="border-bottom: 1px dashed #000; margin: 10px 0;"></div>
-        <table style="width: 100%; font-size: 14px; border-collapse: collapse; color: black;">
+        <p style="font-size: 14px; margin: 8px 0; color: black !important;"><strong>PRODUTOR:</strong> <span id="pdfNome" style="color: black !important;"></span></p>
+        <p style="font-size: 14px; margin: 8px 0; color: black !important;"><strong>DATA:</strong> <span id="pdfData" style="color: black !important;"></span></p>
+        <div style="border-bottom: 1px dashed #000; margin: 15px 0;"></div>
+        <table style="width: 100%; font-size: 14px; border-collapse: collapse; color: black !important;">
             <thead>
                 <tr>
-                    <th style="text-align: left; border-bottom: 1px solid #000;">PRODUTO</th>
-                    <th style="text-align: right; border-bottom: 1px solid #000;">QTD</th>
+                    <th style="text-align: left; border-bottom: 1px solid #000; padding-bottom: 5px;">PRODUTO</th>
+                    <th style="text-align: right; border-bottom: 1px solid #000; padding-bottom: 5px;">QTD</th>
                 </tr>
             </thead>
-            <tbody id="pdfItens"></tbody>
+            <tbody id="pdfItens" style="color: black !important;"></tbody>
         </table>
-        <div style="border-top: 2px dashed #000; margin-top: 20px; padding-top: 10px; text-align: center; color: black;">
-            <p style="font-size: 10px; margin: 0;">Gerado em: <span id="pdfTimestamp"></span></p>
-            <p style="font-size: 12px; font-weight: bold; margin-top: 5px;">OBRIGADO!</p>
+        <div style="border-top: 2px dashed #000; margin-top: 30px; padding-top: 15px; text-align: center; color: black !important;">
+            <p style="font-size: 10px; margin: 0; color: black !important;">Gerado em: <span id="pdfTimestamp"></span></p>
+            <p style="font-size: 12px; font-weight: bold; margin-top: 10px; color: black !important;">OBRIGADO!</p>
         </div>
     </div>
 
@@ -155,7 +157,6 @@
         async function gerarESalvarPDF(nome, dataEntrega, itens) {
             const container = document.getElementById('conteudoPdfExport');
             
-            // Preenche os dados
             document.getElementById('pdfNome').innerText = nome.toUpperCase();
             document.getElementById('pdfData').innerText = dataEntrega;
             document.getElementById('pdfTimestamp').innerText = new Date().toLocaleString();
@@ -164,26 +165,36 @@
             pdfItensTbody.innerHTML = "";
             
             itens.forEach(item => {
-                const tr = `<tr><td style="padding: 4px 0; border-bottom: 1px solid #eee;">${item.nome}</td><td style="text-align: right; border-bottom: 1px solid #eee;">${item.qtd}</td></tr>`;
+                const tr = `<tr><td style="padding: 6px 0; border-bottom: 1px solid #f0f0f0;">${item.nome}</td><td style="text-align: right; padding: 6px 0; border-bottom: 1px solid #f0f0f0;">${item.qtd}</td></tr>`;
                 pdfItensTbody.innerHTML += tr;
             });
 
-            // Configurações otimizadas para mobile
+            // Torna visível por um instante para captura
+            container.style.visibility = 'visible';
+            container.style.zIndex = '9999';
+
             const opt = {
-                margin: [0.2, 0.2],
-                filename: `Pedido_${nome}_${dataEntrega}.pdf`,
-                image: { type: 'jpeg', quality: 0.98 },
+                margin: 0.3,
+                filename: `Pedido_${nome.replace(/\s+/g, '_')}.pdf`,
+                image: { type: 'jpeg', quality: 1.0 },
                 html2canvas: { 
-                    scale: 3, 
-                    useCORS: true, 
-                    logging: false,
-                    letterRendering: true
+                    scale: 2, 
+                    useCORS: true,
+                    backgroundColor: '#ffffff'
                 },
                 jsPDF: { unit: 'in', format: 'a4', orientation: 'portrait' }
             };
 
-            // Gera o PDF
-            return html2pdf().set(opt).from(container).save();
+            // Pequeno delay para garantir renderização antes do PDF
+            await new Promise(r => setTimeout(r, 500));
+            
+            try {
+                await html2pdf().set(opt).from(container).save();
+            } finally {
+                // Esconde novamente
+                container.style.visibility = 'hidden';
+                container.style.zIndex = '-100';
+            }
         }
 
         form.addEventListener('submit', async function(e) {
@@ -191,7 +202,7 @@
             const URL_DO_SCRIPT = "https://script.google.com/macros/s/AKfycbwj9Pw6zH5ZVKVjqS5eomVO6kHSZUbtNmcVr6DeA8EmISvqmyTNtwuo-MWlwrdFCl17/exec";
 
             btn.disabled = true;
-            btn.innerHTML = `<span class="animate-pulse text-sm">GERANDO E ENVIANDO...</span>`;
+            btn.innerHTML = `<span class="animate-pulse text-sm">PROCESSANDO...</span>`;
 
             const formData = new FormData(this);
             const params = new URLSearchParams();
@@ -206,24 +217,27 @@
                 }
             });
 
-            // Tenta gerar o PDF primeiro
-            try {
-                await gerarESalvarPDF(formData.get('nome'), formData.get('data'), itensParaPdf);
-            } catch (err) {
-                console.error("Erro no PDF:", err);
-            }
+            // Gerar PDF e enviar dados simultaneamente
+            const promises = [
+                gerarESalvarPDF(formData.get('nome'), formData.get('data'), itensParaPdf),
+                fetch(URL_DO_SCRIPT, { method: 'POST', body: params })
+            ];
 
-            // Envia para a planilha
-            fetch(URL_DO_SCRIPT, {
-                method: 'POST',
-                body: params
-            })
-            .finally(() => {
-                modal.classList.remove('hidden');
-                modal.classList.add('flex');
-                btn.disabled = false;
-                btn.innerHTML = `<span>ENVIAR E SALVAR PDF</span><span class="text-xl">➔</span>`;
-            });
+            Promise.all(promises)
+                .then(() => {
+                    modal.classList.remove('hidden');
+                    modal.classList.add('flex');
+                })
+                .catch(err => {
+                    console.error("Erro geral:", err);
+                    // Mesmo com erro no script, mostramos sucesso se o PDF funcionou (opcional)
+                    modal.classList.remove('hidden');
+                    modal.classList.add('flex');
+                })
+                .finally(() => {
+                    btn.disabled = false;
+                    btn.innerHTML = `<span>ENVIAR E SALVAR PDF</span><span class="text-xl">➔</span>`;
+                });
         });
 
         function novoPedido() {
