@@ -26,7 +26,7 @@
             position: absolute;
             left: -5000px;
             top: 0;
-            width: 400px;
+            width: 450px;
         }
     </style>
 </head>
@@ -78,30 +78,32 @@
 
     <!-- ÁREA DO PDF - Fora da tela mas RENDERIZADA -->
     <div id="wrapper-pdf">
-        <div id="conteudoPdfExport" class="p-8 fonte-cupom" style="background: white; color: black; width: 400px;">
+        <div id="conteudoPdfExport" class="p-8 fonte-cupom" style="background: white; color: black; width: 450px;">
             <div style="text-align: center; border-bottom: 2px dashed black; padding-bottom: 10px; margin-bottom: 10px;">
-                <h2 style="margin: 0; font-size: 22px;">COOPERATIVA CLAF</h2>
-                <p style="margin: 0; font-size: 11px; text-transform: uppercase;">Recibo de Pedido</p>
+                <h2 style="margin: 0; font-size: 22px; color: black;">COOPERATIVA CLAF</h2>
+                <p style="margin: 0; font-size: 11px; text-transform: uppercase; color: black;">Recibo de Pedido</p>
             </div>
             
-            <p style="font-size: 13px; margin: 4px 0;"><strong>PRODUTOR:</strong> <span id="pdfNome"></span></p>
-            <p style="font-size: 13px; margin: 4px 0;"><strong>DATA:</strong> <span id="pdfData"></span></p>
+            <p style="font-size: 13px; margin: 4px 0; color: black;"><strong>PRODUTOR:</strong> <span id="pdfNome"></span></p>
+            <p style="font-size: 13px; margin: 4px 0; color: black;"><strong>DATA:</strong> <span id="pdfData"></span></p>
             
             <div style="border-bottom: 1px solid black; margin: 10px 0;"></div>
             
-            <table style="width: 100%; border-collapse: collapse; font-size: 12px;">
+            <table style="width: 100%; border-collapse: collapse; font-size: 12px; color: black;">
                 <thead>
                     <tr style="border-bottom: 1px solid black;">
                         <th style="text-align: left; padding: 4px 0;">PRODUTO</th>
                         <th style="text-align: right; padding: 4px 0;">QTD</th>
                     </tr>
                 </thead>
-                <tbody id="pdfItens"></tbody>
+                <tbody id="pdfItens">
+                    <!-- Itens serão inseridos aqui -->
+                </tbody>
             </table>
             
             <div style="margin-top: 20px; border-top: 2px dashed black; padding-top: 10px; text-align: center;">
-                <p style="font-size: 9px; margin: 0;">Gerado em: <span id="pdfTimestamp"></span></p>
-                <p style="font-size: 12px; font-weight: bold; margin-top: 5px;">Cooperativa CLAF agradece!</p>
+                <p style="font-size: 9px; margin: 0; color: black;">Gerado em: <span id="pdfTimestamp"></span></p>
+                <p style="font-size: 12px; font-weight: bold; margin-top: 5px; color: black;">Cooperativa CLAF agradece!</p>
             </div>
         </div>
     </div>
@@ -152,22 +154,31 @@
             document.getElementById('pdfTimestamp').innerText = new Date().toLocaleString();
             
             const pdfItensTbody = document.getElementById('pdfItens');
-            pdfItensTbody.innerHTML = itens.map(i => `
-                <tr style="border-bottom: 1px solid #eee;">
-                    <td style="padding: 5px 0;">${i.nome}</td>
-                    <td style="text-align: right; padding: 5px 0;">${i.qtd}</td>
-                </tr>
-            `).join('');
+            pdfItensTbody.innerHTML = ""; // Limpa antes de inserir
+            
+            itens.forEach(i => {
+                const tr = document.createElement('tr');
+                tr.style.borderBottom = "1px solid #eee";
+                tr.innerHTML = `
+                    <td style="padding: 6px 0; text-align: left; color: black;">${i.nome}</td>
+                    <td style="padding: 6px 0; text-align: right; color: black;">${i.qtd}</td>
+                `;
+                pdfItensTbody.appendChild(tr);
+            });
+
+            // Pequeno delay para garantir renderização do DOM no telemóvel antes do print
+            await new Promise(resolve => setTimeout(resolve, 500));
 
             const opt = {
-                margin: 0.5,
+                margin: 0.3,
                 filename: `Pedido_${nome.replace(/\s+/g, '_')}.pdf`,
                 image: { type: 'jpeg', quality: 0.98 },
                 html2canvas: { 
                     scale: 2, 
                     backgroundColor: "#ffffff",
                     useCORS: true,
-                    logging: false
+                    logging: false,
+                    letterRendering: true
                 },
                 jsPDF: { unit: 'in', format: 'a4', orientation: 'portrait' }
             };
@@ -179,7 +190,7 @@
             e.preventDefault();
             const btn = document.getElementById('btnEnviar');
             btn.disabled = true;
-            btn.innerHTML = `<span class="animate-pulse">PROCESSANDO...</span>`;
+            btn.innerHTML = `<span class="animate-pulse">A GERAR PDF...</span>`;
 
             const formData = new FormData(this);
             const params = new URLSearchParams();
@@ -188,12 +199,21 @@
             formData.forEach((val, key) => {
                 if (val && val !== "0" && val !== "") {
                     params.append(key, val);
-                    if (key !== 'nome' && key !== 'data') itens.push({ nome: key.replace(/_/g, ' '), qtd: val });
+                    if (key !== 'nome' && key !== 'data') {
+                        itens.push({ nome: key.replace(/_/g, ' '), qtd: val });
+                    }
                 }
             });
 
+            if (itens.length === 0) {
+                alert("Por favor, selecione pelo menos um produto.");
+                btn.disabled = false;
+                btn.innerHTML = `<span>ENVIAR E SALVAR PDF</span><span class="text-xl">➔</span>`;
+                return;
+            }
+
             try {
-                // Tenta gerar o PDF
+                // Tenta gerar o PDF primeiro
                 await gerarPDF(formData.get('nome'), formData.get('data'), itens);
                 
                 // Envia para a planilha
@@ -206,7 +226,7 @@
                 document.getElementById('modalSucesso').classList.add('flex');
             } catch (err) {
                 console.error(err);
-                alert("Ocorreu um erro ao processar. Tente novamente.");
+                alert("Ocorreu um erro. Verifique a internet e tente novamente.");
             } finally {
                 btn.disabled = false;
                 btn.innerHTML = `<span>ENVIAR E SALVAR PDF</span><span class="text-xl">➔</span>`;
