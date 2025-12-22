@@ -21,12 +21,12 @@
         .btn-shadow { box-shadow: 0 4px 0 rgb(21, 128, 61); }
         .btn-shadow:active { box-shadow: none; transform: translateY(2px); }
 
-        /* Esconder o template do PDF sem usar opacity ou display:none */
+        /* Posicionamento do template do PDF fora da área visível mas renderizável */
         #wrapper-pdf {
             position: absolute;
             left: -5000px;
             top: 0;
-            width: 450px;
+            width: 300px;
         }
     </style>
 </head>
@@ -54,7 +54,7 @@
                 </div>
             </div>
 
-            <!-- Tabela -->
+            <!-- Tabela de Produtos -->
             <div class="border border-black rounded overflow-hidden bg-white">
                 <table class="w-full border-collapse fonte-cupom">
                     <thead>
@@ -76,34 +76,36 @@
         </form>
     </div>
 
-    <!-- ÁREA DO PDF - Fora da tela mas RENDERIZADA -->
+    <!-- ÁREA DO PDF - Otimizada para Impressora Térmica (80mm) -->
     <div id="wrapper-pdf">
-        <div id="conteudoPdfExport" class="p-8 fonte-cupom" style="background: white; color: black; width: 450px;">
+        <div id="conteudoPdfExport" class="p-4 fonte-cupom" style="background: white; color: black; width: 300px; font-size: 13px;">
             <div style="text-align: center; border-bottom: 2px dashed black; padding-bottom: 10px; margin-bottom: 10px;">
-                <h2 style="margin: 0; font-size: 22px; color: black;">COOPERATIVA CLAF</h2>
-                <p style="margin: 0; font-size: 11px; text-transform: uppercase; color: black;">Recibo de Pedido</p>
+                <h2 style="margin: 0; font-size: 18px; color: black; font-weight: bold;">COOPERATIVA CLAF</h2>
+                <p style="margin: 0; font-size: 10px; text-transform: uppercase; color: black;">Recibo de Pedido</p>
             </div>
             
-            <p style="font-size: 13px; margin: 4px 0; color: black;"><strong>PRODUTOR:</strong> <span id="pdfNome"></span></p>
-            <p style="font-size: 13px; margin: 4px 0; color: black;"><strong>DATA:</strong> <span id="pdfData"></span></p>
+            <p style="margin: 5px 0; color: black;"><strong>PRODUTOR:</strong> <span id="pdfNome"></span></p>
+            <p style="margin: 5px 0; color: black;"><strong>DATA:</strong> <span id="pdfData"></span></p>
             
-            <div style="border-bottom: 1px solid black; margin: 10px 0;"></div>
+            <div style="border-bottom: 1px solid black; margin: 8px 0;"></div>
             
-            <table style="width: 100%; border-collapse: collapse; font-size: 12px; color: black;">
+            <table style="width: 100%; border-collapse: collapse; color: black;">
                 <thead>
                     <tr style="border-bottom: 1px solid black;">
-                        <th style="text-align: left; padding: 4px 0;">PRODUTO</th>
-                        <th style="text-align: right; padding: 4px 0;">QTD</th>
+                        <th style="text-align: left; padding: 4px 0; font-size: 11px;">PRODUTO</th>
+                        <th style="text-align: right; padding: 4px 0; font-size: 11px;">QTD</th>
                     </tr>
                 </thead>
                 <tbody id="pdfItens">
-                    <!-- Itens serão inseridos aqui -->
+                    <!-- Preenchido via JavaScript -->
                 </tbody>
             </table>
             
-            <div style="margin-top: 20px; border-top: 2px dashed black; padding-top: 10px; text-align: center;">
-                <p style="font-size: 9px; margin: 0; color: black;">Gerado em: <span id="pdfTimestamp"></span></p>
+            <div style="margin-top: 15px; border-top: 2px dashed black; padding-top: 10px; text-align: center;">
+                <p style="font-size: 9px; margin: 0; color: black;">Emitido em: <span id="pdfTimestamp"></span></p>
                 <p style="font-size: 12px; font-weight: bold; margin-top: 5px; color: black;">Cooperativa CLAF agradece!</p>
+                <div style="height: 40px;"></div> <!-- Espaço extra para o corte da impressora -->
+                <p style="font-size: 8px; color: #ccc;">.</p>
             </div>
         </div>
     </div>
@@ -121,9 +123,11 @@
     <script>
         const produtos = ["Abacate", "Abacaxi", "Banana caturra", "Banana maçã ou prata", "Laranja baiana lima", "Laranja Comum", "Maçã", "Mamão", "Manga", "Maracujá", "Melancia", "Melão", "Pera", "Pêssego", "Tangerina poncã", "Almeirão", "Acelga", "Agrião", "Alface", "Couve Manteiga", "Escarola", "Espinafre", "Quiabo", "Repolho", "Rúcula", "Abobrinha verde", "Beterraba", "Brócolis", "Cenoura", "Chuchu", "Couve flor", "Milho verde", "Pepino", "Tomate", "Vagem", "Leite Pasteurizado", "Pão Caseiro", "Alho poró", "Cebola", "Cebolinha Verde", "Limão", "Pimentão", "Rabanete", "Salsinha", "Batata doce", "Batata inglesa", "Iogurte"];
 
+        // Configuração inicial da data
         document.getElementById('campoData').value = new Date().toISOString().split('T')[0];
         const tbody = document.getElementById('listaProdutos');
 
+        // Gerar linhas da tabela no formulário
         produtos.forEach((prod, index) => {
             const tr = document.createElement('tr');
             tr.className = "item-row border-b border-gray-100";
@@ -148,39 +152,41 @@
         async function gerarPDF(nome, data, itens) {
             const element = document.getElementById('conteudoPdfExport');
             
-            // Inserir dados
+            // Preencher cabeçalho do PDF
             document.getElementById('pdfNome').innerText = nome.toUpperCase();
             document.getElementById('pdfData').innerText = data;
-            document.getElementById('pdfTimestamp').innerText = new Date().toLocaleString();
+            document.getElementById('pdfTimestamp').innerText = new Date().toLocaleString('pt-PT');
             
+            // Preencher lista de itens no PDF
             const pdfItensTbody = document.getElementById('pdfItens');
-            pdfItensTbody.innerHTML = ""; // Limpa antes de inserir
+            pdfItensTbody.innerHTML = "";
             
             itens.forEach(i => {
                 const tr = document.createElement('tr');
-                tr.style.borderBottom = "1px solid #eee";
+                tr.style.borderBottom = "1px solid #f0f0f0";
                 tr.innerHTML = `
-                    <td style="padding: 6px 0; text-align: left; color: black;">${i.nome}</td>
-                    <td style="padding: 6px 0; text-align: right; color: black;">${i.qtd}</td>
+                    <td style="padding: 5px 0; text-align: left; color: black; font-weight: bold;">${i.nome}</td>
+                    <td style="padding: 5px 0; text-align: right; color: black; font-weight: bold;">${i.qtd}</td>
                 `;
                 pdfItensTbody.appendChild(tr);
             });
 
-            // Pequeno delay para garantir renderização do DOM no telemóvel antes do print
-            await new Promise(resolve => setTimeout(resolve, 500));
+            // Delay crítico para renderização em browsers mobile/guias anónimas
+            await new Promise(resolve => setTimeout(resolve, 800));
 
             const opt = {
-                margin: 0.3,
+                margin: 0,
                 filename: `Pedido_${nome.replace(/\s+/g, '_')}.pdf`,
-                image: { type: 'jpeg', quality: 0.98 },
+                image: { type: 'jpeg', quality: 1 },
                 html2canvas: { 
-                    scale: 2, 
+                    scale: 3, 
                     backgroundColor: "#ffffff",
                     useCORS: true,
                     logging: false,
                     letterRendering: true
                 },
-                jsPDF: { unit: 'in', format: 'a4', orientation: 'portrait' }
+                // Formato para Cupom 80mm (3.15 polegadas de largura)
+                jsPDF: { unit: 'in', format: [3.15, 11], orientation: 'portrait' }
             };
 
             return html2pdf().set(opt).from(element).save();
@@ -190,7 +196,7 @@
             e.preventDefault();
             const btn = document.getElementById('btnEnviar');
             btn.disabled = true;
-            btn.innerHTML = `<span class="animate-pulse">A GERAR PDF...</span>`;
+            btn.innerHTML = `<span class="animate-pulse">A GERAR CUPOM...</span>`;
 
             const formData = new FormData(this);
             const params = new URLSearchParams();
@@ -200,33 +206,35 @@
                 if (val && val !== "0" && val !== "") {
                     params.append(key, val);
                     if (key !== 'nome' && key !== 'data') {
+                        // Converte o ID de volta para o nome legível
                         itens.push({ nome: key.replace(/_/g, ' '), qtd: val });
                     }
                 }
             });
 
             if (itens.length === 0) {
-                alert("Por favor, selecione pelo menos um produto.");
+                alert("Por favor, introduza a quantidade em pelo menos um produto.");
                 btn.disabled = false;
                 btn.innerHTML = `<span>ENVIAR E SALVAR PDF</span><span class="text-xl">➔</span>`;
                 return;
             }
 
             try {
-                // Tenta gerar o PDF primeiro
+                // 1. Gera e descarrega o PDF (prioridade para o utilizador ter o comprovativo)
                 await gerarPDF(formData.get('nome'), formData.get('data'), itens);
                 
-                // Envia para a planilha
+                // 2. Envia para a Planilha Google
                 await fetch("https://script.google.com/macros/s/AKfycbwj9Pw6zH5ZVKVjqS5eomVO6kHSZUbtNmcVr6DeA8EmISvqmyTNtwuo-MWlwrdFCl17/exec", {
                     method: 'POST',
                     body: params
                 });
 
+                // 3. Mostra o sucesso
                 document.getElementById('modalSucesso').classList.remove('hidden');
                 document.getElementById('modalSucesso').classList.add('flex');
             } catch (err) {
                 console.error(err);
-                alert("Ocorreu um erro. Verifique a internet e tente novamente.");
+                alert("Erro ao processar o pedido. Verifique a ligação à internet.");
             } finally {
                 btn.disabled = false;
                 btn.innerHTML = `<span>ENVIAR E SALVAR PDF</span><span class="text-xl">➔</span>`;
