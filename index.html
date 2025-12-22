@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Cooperativa Familiar - Pedidos</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Biblioteca para gerar PDF no lado do cliente -->
+    <!-- Biblioteca para gerar PDF -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Courier+Prime:wght@400;700&display=swap');
@@ -13,30 +13,27 @@
         .cabecalho-tabela { background-color: #ffff00; }
         input[type="number"] { -moz-appearance: textfield; appearance: textfield; }
         input[type="number"]::-webkit-inner-spin-button, input[type="number"]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
-        input { color: #000 !important; opacity: 1 !important; }
+        input { color: #000 !important; }
+        
+        /* Estilos para o Modal */
         @keyframes pop { 0% { transform: scale(0.8); opacity: 0; } 100% { transform: scale(1); opacity: 1; } }
         .animate-pop { animation: pop 0.3s ease-out forwards; }
         .btn-shadow { box-shadow: 0 4px 0 rgb(21, 128, 61); }
         .btn-shadow:active { box-shadow: none; transform: translateY(2px); }
-        .item-row td { padding-top: 0.25rem !important; padding-bottom: 0.25rem !important; }
-        
-        /* Ajuste para evitar PDF em branco */
-        #conteudoPdfExport {
-            position: fixed;
+
+        /* Esconder o template do PDF sem usar opacity ou display:none */
+        #wrapper-pdf {
+            position: absolute;
+            left: -5000px;
             top: 0;
-            left: 0;
-            width: 100%;
-            z-index: -100;
-            background: white;
-            visibility: hidden;
+            width: 400px;
         }
     </style>
 </head>
 <body class="bg-gray-100 min-h-screen pb-6 font-sans">
 
-    <div class="max-w-[360px] mx-auto bg-white min-h-screen shadow-xl border-x border-gray-200">
-        
-        <!-- Cabeçalho Atualizado -->
+    <div class="max-w-[360px] mx-auto bg-white min-h-screen shadow-xl border-x border-gray-200 relative z-10">
+        <!-- Cabeçalho Principal -->
         <div class="bg-green-700 p-6 text-white text-center shadow-sm">
             <h1 class="text-xl font-bold uppercase tracking-tight italic opacity-90">Cooperativa</h1>
             <h2 class="text-5xl font-black uppercase tracking-tighter text-yellow-400 -mt-1">CLAF</h2>
@@ -45,12 +42,11 @@
         </div>
 
         <form id="meuFormulario" class="p-3 space-y-4">
-            
-            <!-- Identificação -->
+            <!-- Nome e Data -->
             <div class="grid grid-cols-2 gap-2 bg-gray-50 p-3 rounded-lg border border-gray-300">
                 <div class="col-span-2">
                     <label class="block text-[10px] font-black text-gray-700 mb-0.5 uppercase italic">1. Nome do produtor</label>
-                    <input type="text" name="nome" id="inputNome" class="w-full p-2 border border-gray-300 rounded focus:border-green-600 outline-none text-sm font-bold text-black" placeholder="Seu nome" required>
+                    <input type="text" name="nome" id="inputNome" class="w-full p-2 border border-gray-300 rounded focus:border-green-600 outline-none text-sm font-bold text-black" placeholder="O seu nome" required>
                 </div>
                 <div class="col-span-2">
                     <label class="block text-[10px] font-black text-gray-700 mb-0.5 uppercase italic">2. Data</label>
@@ -58,7 +54,7 @@
                 </div>
             </div>
 
-            <!-- Tabela de Itens -->
+            <!-- Tabela -->
             <div class="border border-black rounded overflow-hidden bg-white">
                 <table class="w-full border-collapse fonte-cupom">
                     <thead>
@@ -67,17 +63,12 @@
                             <th class="border-b border-black p-2 text-[10px] font-black uppercase text-center w-1/3">QTD.</th>
                         </tr>
                     </thead>
-                    <tbody id="listaProdutos" class="divide-y divide-gray-100">
-                    </tbody>
+                    <tbody id="listaProdutos" class="divide-y divide-gray-100"></tbody>
                 </table>
             </div>
 
             <div class="sticky bottom-2 pt-2">
-                <button 
-                    type="submit"
-                    id="btnEnviar"
-                    class="w-full bg-green-600 hover:bg-green-700 text-white py-4 rounded-xl font-black text-lg btn-shadow transition-all transform uppercase flex items-center justify-center gap-2"
-                >
+                <button type="submit" id="btnEnviar" class="w-full bg-green-600 hover:bg-green-700 text-white py-4 rounded-xl font-black text-lg btn-shadow transition-all transform uppercase flex items-center justify-center gap-2">
                     <span>ENVIAR E SALVAR PDF</span>
                     <span class="text-xl">➔</span>
                 </button>
@@ -85,27 +76,33 @@
         </form>
     </div>
 
-    <!-- Template para o PDF (Garantido fundo branco e texto preto) -->
-    <div id="conteudoPdfExport" class="p-10 fonte-cupom" style="background-color: white !important; color: black !important;">
-        <div style="text-align: center; border-bottom: 2px dashed #000; padding-bottom: 10px; margin-bottom: 10px;">
-            <h2 style="margin: 0; font-size: 24px; color: black !important;">COOPERATIVA CLAF</h2>
-            <p style="margin: 0; font-size: 12px; color: black !important;">RECIBO DE PEDIDO</p>
-        </div>
-        <p style="font-size: 14px; margin: 8px 0; color: black !important;"><strong>PRODUTOR:</strong> <span id="pdfNome" style="color: black !important;"></span></p>
-        <p style="font-size: 14px; margin: 8px 0; color: black !important;"><strong>DATA:</strong> <span id="pdfData" style="color: black !important;"></span></p>
-        <div style="border-bottom: 1px dashed #000; margin: 15px 0;"></div>
-        <table style="width: 100%; font-size: 14px; border-collapse: collapse; color: black !important;">
-            <thead>
-                <tr>
-                    <th style="text-align: left; border-bottom: 1px solid #000; padding-bottom: 5px;">PRODUTO</th>
-                    <th style="text-align: right; border-bottom: 1px solid #000; padding-bottom: 5px;">QTD</th>
-                </tr>
-            </thead>
-            <tbody id="pdfItens" style="color: black !important;"></tbody>
-        </table>
-        <div style="border-top: 2px dashed #000; margin-top: 30px; padding-top: 15px; text-align: center; color: black !important;">
-            <p style="font-size: 10px; margin: 0; color: black !important;">Gerado em: <span id="pdfTimestamp"></span></p>
-            <p style="font-size: 12px; font-weight: bold; margin-top: 10px; color: black !important;">OBRIGADO!</p>
+    <!-- ÁREA DO PDF - Fora da tela mas RENDERIZADA -->
+    <div id="wrapper-pdf">
+        <div id="conteudoPdfExport" class="p-8 fonte-cupom" style="background: white; color: black; width: 400px;">
+            <div style="text-align: center; border-bottom: 2px dashed black; padding-bottom: 10px; margin-bottom: 10px;">
+                <h2 style="margin: 0; font-size: 22px;">COOPERATIVA CLAF</h2>
+                <p style="margin: 0; font-size: 11px; text-transform: uppercase;">Recibo de Pedido</p>
+            </div>
+            
+            <p style="font-size: 13px; margin: 4px 0;"><strong>PRODUTOR:</strong> <span id="pdfNome"></span></p>
+            <p style="font-size: 13px; margin: 4px 0;"><strong>DATA:</strong> <span id="pdfData"></span></p>
+            
+            <div style="border-bottom: 1px solid black; margin: 10px 0;"></div>
+            
+            <table style="width: 100%; border-collapse: collapse; font-size: 12px;">
+                <thead>
+                    <tr style="border-bottom: 1px solid black;">
+                        <th style="text-align: left; padding: 4px 0;">PRODUTO</th>
+                        <th style="text-align: right; padding: 4px 0;">QTD</th>
+                    </tr>
+                </thead>
+                <tbody id="pdfItens"></tbody>
+            </table>
+            
+            <div style="margin-top: 20px; border-top: 2px dashed black; padding-top: 10px; text-align: center;">
+                <p style="font-size: 9px; margin: 0;">Gerado em: <span id="pdfTimestamp"></span></p>
+                <p style="font-size: 12px; font-weight: bold; margin-top: 5px;">Cooperativa CLAF agradece!</p>
+            </div>
         </div>
     </div>
 
@@ -113,12 +110,9 @@
     <div id="modalSucesso" class="fixed inset-0 bg-black/80 hidden items-center justify-center p-4 z-50">
         <div class="bg-white p-6 rounded-2xl text-center max-w-[280px] w-full border-4 border-green-500 shadow-2xl animate-pop">
             <div class="w-14 h-14 bg-green-100 text-green-600 rounded-full flex items-center justify-center mx-auto mb-3 text-3xl font-bold">✓</div>
-            <h2 class="text-xl font-black text-green-700 uppercase mb-1">Enviado!</h2>
-            <p class="text-gray-600 font-bold mb-4 text-[10px] italic">O PDF foi salvo no seu dispositivo e os dados enviados para a cooperativa.</p>
-            
-            <button onclick="novoPedido()" class="w-full bg-green-600 text-white py-3 rounded-lg font-black uppercase text-xs">
-                + NOVO PEDIDO
-            </button>
+            <h2 class="text-xl font-black text-green-700 uppercase mb-1">Pedido Enviado!</h2>
+            <p class="text-gray-600 font-bold mb-4 text-[10px] italic text-center">O PDF foi guardado e os dados enviados para a planilha.</p>
+            <button onclick="novoPedido()" class="w-full bg-green-600 text-white py-3 rounded-lg font-black uppercase text-xs">NOVO PEDIDO</button>
         </div>
     </div>
 
@@ -126,13 +120,12 @@
         const produtos = ["Abacate", "Abacaxi", "Banana caturra", "Banana maçã ou prata", "Laranja baiana lima", "Laranja Comum", "Maçã", "Mamão", "Manga", "Maracujá", "Melancia", "Melão", "Pera", "Pêssego", "Tangerina poncã", "Almeirão", "Acelga", "Agrião", "Alface", "Couve Manteiga", "Escarola", "Espinafre", "Quiabo", "Repolho", "Rúcula", "Abobrinha verde", "Beterraba", "Brócolis", "Cenoura", "Chuchu", "Couve flor", "Milho verde", "Pepino", "Tomate", "Vagem", "Leite Pasteurizado", "Pão Caseiro", "Alho poró", "Cebola", "Cebolinha Verde", "Limão", "Pimentão", "Rabanete", "Salsinha", "Batata doce", "Batata inglesa", "Iogurte"];
 
         document.getElementById('campoData').value = new Date().toISOString().split('T')[0];
-
         const tbody = document.getElementById('listaProdutos');
+
         produtos.forEach((prod, index) => {
             const tr = document.createElement('tr');
-            tr.className = "item-row border-b border-gray-100 items-center";
+            tr.className = "item-row border-b border-gray-100";
             const idPlanilha = prod.normalize('NFD').replace(/[\u0300-\u036f]/g, "").replace(/\s+/g, '_');
-            
             tr.innerHTML = `
                 <td class="p-2">
                     <label class="flex items-center gap-2 cursor-pointer select-none">
@@ -150,103 +143,78 @@
             tbody.appendChild(tr);
         });
 
-        const form = document.getElementById('meuFormulario');
-        const modal = document.getElementById('modalSucesso');
-        const btn = document.getElementById('btnEnviar');
-
-        async function gerarESalvarPDF(nome, dataEntrega, itens) {
-            const container = document.getElementById('conteudoPdfExport');
+        async function gerarPDF(nome, data, itens) {
+            const element = document.getElementById('conteudoPdfExport');
             
+            // Inserir dados
             document.getElementById('pdfNome').innerText = nome.toUpperCase();
-            document.getElementById('pdfData').innerText = dataEntrega;
+            document.getElementById('pdfData').innerText = data;
             document.getElementById('pdfTimestamp').innerText = new Date().toLocaleString();
             
             const pdfItensTbody = document.getElementById('pdfItens');
-            pdfItensTbody.innerHTML = "";
-            
-            itens.forEach(item => {
-                const tr = `<tr><td style="padding: 6px 0; border-bottom: 1px solid #f0f0f0;">${item.nome}</td><td style="text-align: right; padding: 6px 0; border-bottom: 1px solid #f0f0f0;">${item.qtd}</td></tr>`;
-                pdfItensTbody.innerHTML += tr;
-            });
-
-            // Torna visível por um instante para captura
-            container.style.visibility = 'visible';
-            container.style.zIndex = '9999';
+            pdfItensTbody.innerHTML = itens.map(i => `
+                <tr style="border-bottom: 1px solid #eee;">
+                    <td style="padding: 5px 0;">${i.nome}</td>
+                    <td style="text-align: right; padding: 5px 0;">${i.qtd}</td>
+                </tr>
+            `).join('');
 
             const opt = {
-                margin: 0.3,
+                margin: 0.5,
                 filename: `Pedido_${nome.replace(/\s+/g, '_')}.pdf`,
-                image: { type: 'jpeg', quality: 1.0 },
+                image: { type: 'jpeg', quality: 0.98 },
                 html2canvas: { 
                     scale: 2, 
+                    backgroundColor: "#ffffff",
                     useCORS: true,
-                    backgroundColor: '#ffffff'
+                    logging: false
                 },
                 jsPDF: { unit: 'in', format: 'a4', orientation: 'portrait' }
             };
 
-            // Pequeno delay para garantir renderização antes do PDF
-            await new Promise(r => setTimeout(r, 500));
-            
-            try {
-                await html2pdf().set(opt).from(container).save();
-            } finally {
-                // Esconde novamente
-                container.style.visibility = 'hidden';
-                container.style.zIndex = '-100';
-            }
+            return html2pdf().set(opt).from(element).save();
         }
 
-        form.addEventListener('submit', async function(e) {
+        document.getElementById('meuFormulario').addEventListener('submit', async function(e) {
             e.preventDefault();
-            const URL_DO_SCRIPT = "https://script.google.com/macros/s/AKfycbwj9Pw6zH5ZVKVjqS5eomVO6kHSZUbtNmcVr6DeA8EmISvqmyTNtwuo-MWlwrdFCl17/exec";
-
+            const btn = document.getElementById('btnEnviar');
             btn.disabled = true;
-            btn.innerHTML = `<span class="animate-pulse text-sm">PROCESSANDO...</span>`;
+            btn.innerHTML = `<span class="animate-pulse">PROCESSANDO...</span>`;
 
             const formData = new FormData(this);
             const params = new URLSearchParams();
-            const itensParaPdf = [];
-            
-            formData.forEach((value, key) => {
-                if (value && value !== "0" && value !== "") {
-                    params.append(key, value);
-                    if (key !== 'nome' && key !== 'data') {
-                        itensParaPdf.push({ nome: key.replace(/_/g, ' '), qtd: value });
-                    }
+            const itens = [];
+
+            formData.forEach((val, key) => {
+                if (val && val !== "0" && val !== "") {
+                    params.append(key, val);
+                    if (key !== 'nome' && key !== 'data') itens.push({ nome: key.replace(/_/g, ' '), qtd: val });
                 }
             });
 
-            // Gerar PDF e enviar dados simultaneamente
-            const promises = [
-                gerarESalvarPDF(formData.get('nome'), formData.get('data'), itensParaPdf),
-                fetch(URL_DO_SCRIPT, { method: 'POST', body: params })
-            ];
-
-            Promise.all(promises)
-                .then(() => {
-                    modal.classList.remove('hidden');
-                    modal.classList.add('flex');
-                })
-                .catch(err => {
-                    console.error("Erro geral:", err);
-                    // Mesmo com erro no script, mostramos sucesso se o PDF funcionou (opcional)
-                    modal.classList.remove('hidden');
-                    modal.classList.add('flex');
-                })
-                .finally(() => {
-                    btn.disabled = false;
-                    btn.innerHTML = `<span>ENVIAR E SALVAR PDF</span><span class="text-xl">➔</span>`;
+            try {
+                // Tenta gerar o PDF
+                await gerarPDF(formData.get('nome'), formData.get('data'), itens);
+                
+                // Envia para a planilha
+                await fetch("https://script.google.com/macros/s/AKfycbwj9Pw6zH5ZVKVjqS5eomVO6kHSZUbtNmcVr6DeA8EmISvqmyTNtwuo-MWlwrdFCl17/exec", {
+                    method: 'POST',
+                    body: params
                 });
+
+                document.getElementById('modalSucesso').classList.remove('hidden');
+                document.getElementById('modalSucesso').classList.add('flex');
+            } catch (err) {
+                console.error(err);
+                alert("Ocorreu um erro ao processar. Tente novamente.");
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = `<span>ENVIAR E SALVAR PDF</span><span class="text-xl">➔</span>`;
+            }
         });
 
         function novoPedido() {
-            form.reset();
-            document.querySelectorAll('input[type="checkbox"]').forEach(cb => cb.checked = false);
-            document.getElementById('campoData').value = new Date().toISOString().split('T')[0];
-            modal.classList.add('hidden');
-            modal.classList.remove('flex');
-            window.scrollTo(0, 0);
+            location.reload();
         }
     </script>
 </body>
