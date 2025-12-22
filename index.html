@@ -21,7 +21,7 @@
         .btn-shadow { box-shadow: 0 4px 0 rgb(21, 128, 61); }
         .btn-shadow:active { box-shadow: none; transform: translateY(2px); }
 
-        /* Estilo do Overlay de Geração de PDF - Melhora a prioridade de renderização */
+        /* Estilo do Overlay de Geração de PDF */
         #wrapper-pdf {
             position: fixed;
             top: 0;
@@ -40,8 +40,8 @@
 
         #conteudoPdfExport {
             background: white;
-            width: 300px;
-            padding: 15px;
+            width: 80mm; /* Largura padrão de cupom */
+            padding: 5mm;
             border: 1px solid #eee;
         }
     </style>
@@ -92,25 +92,25 @@
         </form>
     </div>
 
-    <!-- ÁREA DO PDF (Visualização técnica para garantir captura) -->
+    <!-- ÁREA DO PDF (Tamanho de Cupom) -->
     <div id="wrapper-pdf">
-        <div class="mb-4 text-green-700 font-black text-sm animate-pulse">A PREPARAR DOCUMENTO...</div>
+        <div class="mb-4 text-green-700 font-black text-sm animate-pulse">A PREPARAR CUPOM...</div>
         <div id="conteudoPdfExport" class="fonte-cupom">
             <div style="text-align: center; border-bottom: 2px dashed black; padding-bottom: 10px; margin-bottom: 10px;">
-                <h2 style="margin: 0; font-size: 18px; color: black; font-weight: bold;">COOPERATIVA CLAF</h2>
-                <p style="margin: 0; font-size: 10px; text-transform: uppercase; color: black;">Recibo de Pedido</p>
+                <h2 style="margin: 0; font-size: 16px; color: black; font-weight: bold;">COOPERATIVA CLAF</h2>
+                <p style="margin: 0; font-size: 9px; text-transform: uppercase; color: black;">Recibo de Pedido</p>
             </div>
             
-            <p style="margin: 5px 0; color: black; font-size: 13px;"><strong>PRODUTOR:</strong> <span id="pdfNome"></span></p>
-            <p style="margin: 5px 0; color: black; font-size: 13px;"><strong>DATA:</strong> <span id="pdfData"></span></p>
+            <p style="margin: 3px 0; color: black; font-size: 11px;"><strong>PRODUTOR:</strong> <span id="pdfNome"></span></p>
+            <p style="margin: 3px 0; color: black; font-size: 11px;"><strong>DATA:</strong> <span id="pdfData"></span></p>
             
-            <div style="border-bottom: 1px solid black; margin: 8px 0;"></div>
+            <div style="border-bottom: 1px solid black; margin: 5px 0;"></div>
             
             <table style="width: 100%; border-collapse: collapse; color: black;">
                 <thead>
                     <tr style="border-bottom: 1px solid black;">
-                        <th style="text-align: left; padding: 4px 0; font-size: 11px;">PRODUTO</th>
-                        <th style="text-align: right; padding: 4px 0; font-size: 11px;">QTD</th>
+                        <th style="text-align: left; padding: 2px 0; font-size: 10px;">PRODUTO</th>
+                        <th style="text-align: right; padding: 2px 0; font-size: 10px;">QTD</th>
                     </tr>
                 </thead>
                 <tbody id="pdfItens">
@@ -118,11 +118,10 @@
                 </tbody>
             </table>
             
-            <div style="margin-top: 15px; border-top: 2px dashed black; padding-top: 10px; text-align: center;">
-                <p style="font-size: 9px; margin: 0; color: black;">Emitido em: <span id="pdfTimestamp"></span></p>
-                <p style="font-size: 12px; font-weight: bold; margin-top: 5px; color: black;">Cooperativa CLAF agradece!</p>
-                <div style="height: 50px;"></div>
-                <p style="font-size: 8px; color: transparent;">-</p>
+            <div style="margin-top: 10px; border-top: 2px dashed black; padding-top: 10px; text-align: center;">
+                <p style="font-size: 8px; margin: 0; color: black;">Emitido em: <span id="pdfTimestamp"></span></p>
+                <p style="font-size: 11px; font-weight: bold; margin-top: 3px; color: black;">Cooperativa CLAF agradece!</p>
+                <div style="height: 20px;"></div>
             </div>
         </div>
     </div>
@@ -132,7 +131,7 @@
         <div class="bg-white p-6 rounded-2xl text-center max-w-[280px] w-full border-4 border-green-500 shadow-2xl animate-pop">
             <div class="w-14 h-14 bg-green-100 text-green-600 rounded-full flex items-center justify-center mx-auto mb-3 text-3xl font-bold">✓</div>
             <h2 class="text-xl font-black text-green-700 uppercase mb-1">Pedido Enviado!</h2>
-            <p class="text-gray-600 font-bold mb-4 text-[10px] italic text-center">O PDF foi guardado e os dados enviados para a planilha.</p>
+            <p class="text-gray-600 font-bold mb-4 text-[10px] italic text-center">O cupom foi gerado e os dados enviados.</p>
             <button onclick="novoPedido()" class="w-full bg-green-600 text-white py-3 rounded-lg font-black uppercase text-xs">NOVO PEDIDO</button>
         </div>
     </div>
@@ -169,7 +168,6 @@
             const element = document.getElementById('conteudoPdfExport');
             const pdfItensTbody = document.getElementById('pdfItens');
             
-            // 1. Preenchimento imediato
             document.getElementById('pdfNome').innerText = nome.toUpperCase();
             document.getElementById('pdfData').innerText = data;
             document.getElementById('pdfTimestamp').innerText = new Date().toLocaleString('pt-PT');
@@ -178,37 +176,36 @@
             itens.forEach(i => {
                 const tr = document.createElement('tr');
                 tr.style.borderBottom = "1px solid #eee";
-                tr.innerHTML = `<td style="padding: 7px 0; text-align: left; font-weight: bold; color: black; font-size: 11px;">${i.nome}</td><td style="padding: 7px 0; text-align: right; font-weight: bold; color: black; font-size: 11px;">${i.qtd}</td>`;
+                tr.innerHTML = `<td style="padding: 4px 0; text-align: left; font-weight: bold; color: black; font-size: 10px;">${i.nome}</td><td style="padding: 4px 0; text-align: right; font-weight: bold; color: black; font-size: 10px;">${i.qtd}</td>`;
                 pdfItensTbody.appendChild(tr);
             });
 
-            // 2. Mostra o overlay e espera o motor gráfico do celular "desenhar"
             wrapper.style.display = "flex";
             window.scrollTo(0,0);
 
-            // Aguarda 1.5 segundos (Tempo seguro para celulares lentos renderizarem o texto)
             await new Promise(resolve => setTimeout(resolve, 1500));
 
+            // Configuração para formato de Cupom (80mm de largura)
             const opt = {
-                margin: 5,
-                filename: `Pedido_${nome.replace(/\s+/g, '_')}.pdf`,
+                margin: 0,
+                filename: `Cupom_${nome.replace(/\s+/g, '_')}.pdf`,
                 image: { type: 'jpeg', quality: 0.98 },
                 html2canvas: { 
-                    scale: 2, // Scale 2 é mais estável para evitar brancos em mobile
+                    scale: 3, 
                     backgroundColor: "#ffffff",
                     useCORS: true,
-                    logging: false,
                     scrollY: 0,
-                    windowWidth: 300 // Força a largura de renderização
                 },
-                jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+                jsPDF: { 
+                    unit: 'mm', 
+                    format: [80, 150 + (itens.length * 5)], // Largura fixa 80mm, altura dinâmica baseada nos itens
+                    orientation: 'portrait' 
+                }
             };
 
             try {
-                // Captura o elemento
                 await html2pdf().set(opt).from(element).save();
             } finally {
-                // Esconde o overlay
                 wrapper.style.display = "none";
             }
         }
@@ -239,19 +236,17 @@
             btn.innerHTML = `<span class="animate-pulse">A ENVIAR...</span>`;
 
             try {
-                // Envio para planilha em background
                 fetch("https://script.google.com/macros/s/AKfycbwj9Pw6zH5ZVKVjqS5eomVO6kHSZUbtNmcVr6DeA8EmISvqmyTNtwuo-MWlwrdFCl17/exec", {
                     method: 'POST',
                     body: params
                 }).catch(() => {});
 
-                // Gerar PDF com espera forçada
                 await gerarPDF(formData.get('nome'), formData.get('data'), itens);
 
                 document.getElementById('modalSucesso').classList.remove('hidden');
                 document.getElementById('modalSucesso').classList.add('flex');
             } catch (err) {
-                alert("Erro ao gerar PDF. Tente novamente.");
+                alert("Erro ao gerar PDF.");
             } finally {
                 btn.disabled = false;
                 btn.innerHTML = `<span>ENVIAR E SALVAR PDF</span><span class="text-xl">➔</span>`;
