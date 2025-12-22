@@ -40,7 +40,7 @@
         /* Ajuste fino para o container do cupom no PDF */
         #conteudoPdfExport {
             background: white;
-            width: 76mm; /* Um pouco menos que 80mm para evitar quebras de margem */
+            width: 76mm; 
             padding: 4mm;
             border: none;
         }
@@ -119,7 +119,7 @@
             <div style="margin-top: 10px; border-top: 2px dashed black; padding-top: 10px; text-align: center;">
                 <p style="font-size: 8px; margin: 0; color: black;">Emitido em: <span id="pdfTimestamp"></span></p>
                 <p style="font-size: 11px; font-weight: bold; margin-top: 3px; color: black;">Cooperativa CLAF agradece!</p>
-                <div style="height: 15px;"></div>
+                <div style="height: 25px;"></div>
             </div>
         </div>
     </div>
@@ -143,7 +143,7 @@
         produtos.forEach((prod, index) => {
             const tr = document.createElement('tr');
             tr.className = "item-row border-b border-gray-100";
-            // Normalizar o ID para evitar caracteres especiais no nome das colunas da planilha
+            // Normalizar o ID para ser consistente com o Script
             const idPlanilha = prod.normalize('NFD').replace(/[\u0300-\u036f]/g, "").replace(/\s+/g, '_');
             tr.innerHTML = `
                 <td class="p-2">
@@ -182,24 +182,23 @@
             wrapper.style.display = "flex";
             window.scrollTo(0,0);
 
-            await new Promise(resolve => setTimeout(resolve, 1000));
+            await new Promise(resolve => setTimeout(resolve, 800));
 
-            // Altura calculada: Cabeçalho (~60mm) + Itens (~8mm por item) + Rodapé (~30mm)
-            const alturaEstimada = 90 + (itens.length * 8);
+            // Altura dinâmica baseada no número de itens
+            const alturaEstimada = 100 + (itens.length * 9);
 
             const opt = {
                 margin: 0,
-                filename: `Cupom_CLAF_${nome.replace(/\s+/g, '_')}.pdf`,
+                filename: `Pedido_CLAF_${nome.replace(/\s+/g, '_')}.pdf`,
                 image: { type: 'jpeg', quality: 0.98 },
                 html2canvas: { 
-                    scale: 3, 
+                    scale: 2, 
                     backgroundColor: "#ffffff",
-                    useCORS: true,
-                    logging: false
+                    useCORS: true
                 },
                 jsPDF: { 
                     unit: 'mm', 
-                    format: [80, Math.max(150, alturaEstimada)], 
+                    format: [80, Math.max(160, alturaEstimada)], 
                     orientation: 'portrait' 
                 }
             };
@@ -215,20 +214,30 @@
             e.preventDefault();
             const btn = document.getElementById('btnEnviar');
             
-            const formData = new FormData(this);
+            // Construção robusta dos parâmetros
             const params = new URLSearchParams();
             const itensParaPDF = [];
+            const inputNome = document.getElementById('inputNome').value;
+            const inputData = document.getElementById('campoData').value;
 
-            // Coletar TODOS os dados e garantir que os produtos marcados sejam processados
-            formData.forEach((val, key) => {
-                // Adicionamos todos ao params para a planilha
-                params.append(key, val);
+            params.append('nome', inputNome);
+            params.append('data', inputData);
+            params.append('timestamp', new Date().toLocaleString('pt-BR'));
+
+            // Capturar TODOS os inputs de quantidade do formulário de forma segura
+            const inputsQtd = this.querySelectorAll('input[type="number"]');
+            inputsQtd.forEach(input => {
+                const valor = input.value;
+                const nomeDoCampo = input.name;
                 
-                // Filtramos apenas os produtos com quantidade para o PDF
-                if (key !== 'nome' && key !== 'data' && val && parseFloat(val) > 0) {
+                // Enviar sempre o valor (mesmo que seja string vazia ou 0) para manter a integridade da linha
+                params.append(nomeDoCampo, valor || "");
+
+                // Para o PDF, apenas o que for maior que zero
+                if (valor && parseFloat(valor) > 0) {
                     itensParaPDF.push({ 
-                        nome: key.replace(/_/g, ' '), 
-                        qtd: val 
+                        nome: nomeDoCampo.replace(/_/g, ' '), 
+                        qtd: valor 
                     });
                 }
             });
@@ -242,24 +251,25 @@
             btn.innerHTML = `<span class="animate-pulse">A ENVIAR...</span>`;
 
             try {
-                // Envio para o Google Script
                 const scriptURL = "https://script.google.com/macros/s/AKfycbwj9Pw6zH5ZVKVjqS5eomVO6kHSZUbtNmcVr6DeA8EmISvqmyTNtwuo-MWlwrdFCl17/exec";
                 
-                // Usamos no-cors pois o Apps Script geralmente não retorna headers CORS, mas os dados chegam lá
+                // Envio POST
                 fetch(scriptURL, {
                     method: 'POST',
                     mode: 'no-cors',
-                    body: params
-                }).catch(err => console.log("Envio processado (silencioso)"));
+                    cache: 'no-cache',
+                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                    body: params.toString()
+                });
 
-                // Gerar o Cupom em formato pequeno
-                await gerarPDF(formData.get('nome'), formData.get('data'), itensParaPDF);
+                // Gerar PDF em tamanho de cupom
+                await gerarPDF(inputNome, inputData, itensParaPDF);
 
                 document.getElementById('modalSucesso').classList.remove('hidden');
                 document.getElementById('modalSucesso').classList.add('flex');
             } catch (err) {
                 console.error(err);
-                alert("Ocorreu um problema ao processar o seu pedido.");
+                alert("Erro ao enviar. Verifique a ligação.");
             } finally {
                 btn.disabled = false;
                 btn.innerHTML = `<span>ENVIAR E SALVAR PDF</span><span class="text-xl">➔</span>`;
