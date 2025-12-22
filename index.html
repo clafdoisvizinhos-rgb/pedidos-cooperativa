@@ -21,14 +21,28 @@
         .btn-shadow { box-shadow: 0 4px 0 rgb(21, 128, 61); }
         .btn-shadow:active { box-shadow: none; transform: translateY(2px); }
 
-        /* NOVO MÉTODO DE ESCONDER: Fora da tela mas 'visível' para o motor do browser */
+        /* Estilo do Overlay de Geração de PDF - Melhora a prioridade de renderização */
         #wrapper-pdf {
             position: fixed;
             top: 0;
-            left: -1000px; /* Move para longe sem usar opacidade */
-            width: 300px;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: #ffffff;
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            justify-content: flex-start;
+            padding-top: 20px;
+            z-index: 99999;
+            overflow-y: auto;
+        }
+
+        #conteudoPdfExport {
             background: white;
-            z-index: -1;
+            width: 300px;
+            padding: 15px;
+            border: 1px solid #eee;
         }
     </style>
 </head>
@@ -78,16 +92,17 @@
         </form>
     </div>
 
-    <!-- ÁREA DO PDF -->
+    <!-- ÁREA DO PDF (Visualização técnica para garantir captura) -->
     <div id="wrapper-pdf">
-        <div id="conteudoPdfExport" class="p-4 fonte-cupom" style="background: white; color: black; width: 300px; font-size: 13px; display: block;">
+        <div class="mb-4 text-green-700 font-black text-sm animate-pulse">A PREPARAR DOCUMENTO...</div>
+        <div id="conteudoPdfExport" class="fonte-cupom">
             <div style="text-align: center; border-bottom: 2px dashed black; padding-bottom: 10px; margin-bottom: 10px;">
                 <h2 style="margin: 0; font-size: 18px; color: black; font-weight: bold;">COOPERATIVA CLAF</h2>
                 <p style="margin: 0; font-size: 10px; text-transform: uppercase; color: black;">Recibo de Pedido</p>
             </div>
             
-            <p style="margin: 5px 0; color: black;"><strong>PRODUTOR:</strong> <span id="pdfNome"></span></p>
-            <p style="margin: 5px 0; color: black;"><strong>DATA:</strong> <span id="pdfData"></span></p>
+            <p style="margin: 5px 0; color: black; font-size: 13px;"><strong>PRODUTOR:</strong> <span id="pdfNome"></span></p>
+            <p style="margin: 5px 0; color: black; font-size: 13px;"><strong>DATA:</strong> <span id="pdfData"></span></p>
             
             <div style="border-bottom: 1px solid black; margin: 8px 0;"></div>
             
@@ -106,8 +121,8 @@
             <div style="margin-top: 15px; border-top: 2px dashed black; padding-top: 10px; text-align: center;">
                 <p style="font-size: 9px; margin: 0; color: black;">Emitido em: <span id="pdfTimestamp"></span></p>
                 <p style="font-size: 12px; font-weight: bold; margin-top: 5px; color: black;">Cooperativa CLAF agradece!</p>
-                <div style="height: 60px;"></div>
-                <p style="font-size: 8px; color: transparent;">.</p>
+                <div style="height: 50px;"></div>
+                <p style="font-size: 8px; color: transparent;">-</p>
             </div>
         </div>
     </div>
@@ -154,10 +169,7 @@
             const element = document.getElementById('conteudoPdfExport');
             const pdfItensTbody = document.getElementById('pdfItens');
             
-            // Força o elemento a estar no viewport (mesmo que atrás de outros)
-            wrapper.style.left = "0px";
-            wrapper.style.zIndex = "999"; 
-
+            // 1. Preenchimento imediato
             document.getElementById('pdfNome').innerText = nome.toUpperCase();
             document.getElementById('pdfData').innerText = data;
             document.getElementById('pdfTimestamp').innerText = new Date().toLocaleString('pt-PT');
@@ -166,38 +178,38 @@
             itens.forEach(i => {
                 const tr = document.createElement('tr');
                 tr.style.borderBottom = "1px solid #eee";
-                tr.innerHTML = `<td style="padding: 7px 0; text-align: left; font-weight: bold;">${i.nome}</td><td style="padding: 7px 0; text-align: right; font-weight: bold;">${i.qtd}</td>`;
+                tr.innerHTML = `<td style="padding: 7px 0; text-align: left; font-weight: bold; color: black; font-size: 11px;">${i.nome}</td><td style="padding: 7px 0; text-align: right; font-weight: bold; color: black; font-size: 11px;">${i.qtd}</td>`;
                 pdfItensTbody.appendChild(tr);
             });
 
-            // Delay essencial para celulares "acordarem" e renderizarem o novo conteúdo
-            await new Promise(resolve => setTimeout(resolve, 800));
+            // 2. Mostra o overlay e espera o motor gráfico do celular "desenhar"
+            wrapper.style.display = "flex";
+            window.scrollTo(0,0);
+
+            // Aguarda 1.5 segundos (Tempo seguro para celulares lentos renderizarem o texto)
+            await new Promise(resolve => setTimeout(resolve, 1500));
 
             const opt = {
-                margin: 0,
+                margin: 5,
                 filename: `Pedido_${nome.replace(/\s+/g, '_')}.pdf`,
                 image: { type: 'jpeg', quality: 0.98 },
                 html2canvas: { 
-                    scale: 2,
+                    scale: 2, // Scale 2 é mais estável para evitar brancos em mobile
                     backgroundColor: "#ffffff",
                     useCORS: true,
                     logging: false,
-                    onclone: (clonedDoc) => {
-                        // Garante que no clone o elemento esteja visível
-                        const pdfContent = clonedDoc.getElementById('conteudoPdfExport');
-                        pdfContent.style.display = 'block';
-                        pdfContent.style.visibility = 'visible';
-                    }
+                    scrollY: 0,
+                    windowWidth: 300 // Força a largura de renderização
                 },
-                jsPDF: { unit: 'mm', format: [80, 300], orientation: 'portrait' }
+                jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
             };
 
             try {
+                // Captura o elemento
                 await html2pdf().set(opt).from(element).save();
             } finally {
-                // Devolve para a "escuridão"
-                wrapper.style.left = "-1000px";
-                wrapper.style.zIndex = "-1";
+                // Esconde o overlay
+                wrapper.style.display = "none";
             }
         }
 
@@ -224,22 +236,22 @@
             }
 
             btn.disabled = true;
-            btn.innerHTML = `<span class="animate-pulse">A GERAR PDF...</span>`;
+            btn.innerHTML = `<span class="animate-pulse">A ENVIAR...</span>`;
 
             try {
-                // Envio em background
+                // Envio para planilha em background
                 fetch("https://script.google.com/macros/s/AKfycbwj9Pw6zH5ZVKVjqS5eomVO6kHSZUbtNmcVr6DeA8EmISvqmyTNtwuo-MWlwrdFCl17/exec", {
                     method: 'POST',
                     body: params
                 }).catch(() => {});
 
-                // PDF com nova estratégia de visibilidade
+                // Gerar PDF com espera forçada
                 await gerarPDF(formData.get('nome'), formData.get('data'), itens);
 
                 document.getElementById('modalSucesso').classList.remove('hidden');
                 document.getElementById('modalSucesso').classList.add('flex');
             } catch (err) {
-                alert("Erro ao processar. Tente novamente.");
+                alert("Erro ao gerar PDF. Tente novamente.");
             } finally {
                 btn.disabled = false;
                 btn.innerHTML = `<span>ENVIAR E SALVAR PDF</span><span class="text-xl">➔</span>`;
