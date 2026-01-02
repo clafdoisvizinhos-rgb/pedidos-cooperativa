@@ -3,171 +3,220 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>COOPERATIVA CLAF - SISTEMA DE IMPRESSÃO</title>
+    <title>Cooperativa Familiar - Pedidos</title>
+    <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Courier+Prime:wght@400;700&display=swap');
 
-        /* CONFIGURAÇÕES DE IMPRESSÃO */
-        @media print {
-            body { background-color: white !important; padding: 0 !important; }
-            .no-print { display: none !important; }
-            .max-w-md { max-width: 100% !important; border: none !important; box-shadow: none !important; }
-            .fonte-cupom { font-size: 12pt !important; }
-            .cabecalho-tabela { background-color: #eee !important; -webkit-print-color-adjust: exact; }
-            .border-print { border: 1pt solid black !important; }
-            table { width: 100% !important; border-collapse: collapse !important; }
-            th, td { border: 0.5pt solid #ccc !important; }
-            input { border: none !important; background: transparent !important; }
-            @page { margin: 1.5cm; }
+        .fonte-cupom {
+            font-family: 'Courier Prime', monospace;
         }
 
-        body { -webkit-tap-highlight-color: transparent; background-color: #f3f4f6; }
-        .fonte-cupom { font-family: 'Courier Prime', monospace; }
-        .cabecalho-tabela { background-color: #ffff00; }
-        
-        /* Estilização dos Inputs */
-        input[type="number"] { -moz-appearance: textfield; }
-        input::-webkit-outer-spin-button, input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
-        
-        .sombra-mobile {
-            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+        .cabecalho-tabela { 
+            background-color: #ffff00; 
         }
 
-        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
-        .animate-fadeIn { animation: fadeIn 0.5s ease-in-out; }
-        
-        @keyframes pop { 0% { transform: scale(0.8); opacity: 0; } 100% { transform: scale(1); opacity: 1; } }
+        /* Redução de escala para mobile */
+        input[type="number"] {
+            -moz-appearance: textfield;
+            appearance: textfield;
+        }
+
+        input[type="number"]::-webkit-inner-spin-button,
+        input[type="number"]::-webkit-outer-spin-button {
+            -webkit-appearance: none;
+            margin: 0;
+        }
+
+        /* Garante visibilidade e reduz altura dos campos */
+        input {
+            color: #000 !important;
+            opacity: 1 !important;
+        }
+
+        @keyframes pop {
+            0% { transform: scale(0.8); opacity: 0; }
+            100% { transform: scale(1); opacity: 1; }
+        }
         .animate-pop { animation: pop 0.3s ease-out forwards; }
+        
+        /* Botão mais denso */
+        .btn-shadow {
+            box-shadow: 0 4px 0 rgb(21, 128, 61);
+        }
+        .btn-shadow:active {
+            box-shadow: none;
+            transform: translateY(2px);
+        }
+
+        /* Ajuste de densidade das linhas da tabela */
+        .item-row td {
+            padding-top: 0.25rem !important;
+            padding-bottom: 0.25rem !important;
+        }
     </style>
 </head>
-<body class="min-h-screen font-sans">
+<body class="bg-gray-100 min-h-screen pb-6 font-sans">
 
-<div class="max-w-2xl mx-auto bg-white min-h-screen shadow-2xl border-x border-gray-200 flex flex-col animate-fadeIn">
-    
-    <!-- CABEÇALHO FORMATADO PARA IMPRESSÃO -->
-    <header class="bg-green-800 p-10 text-white text-center border-b-4 border-yellow-400">
-        <h1 class="text-2xl font-bold uppercase tracking-[0.3em] opacity-80">Cooperativa</h1>
-        <h2 class="text-7xl font-black uppercase tracking-tighter leading-none italic text-yellow-400">CLAF</h2>
-        <div class="mt-4 h-1 w-32 bg-white mx-auto"></div>
-        <p class="text-xs font-bold mt-4 uppercase tracking-[0.4em]">Relatório de Entrega de Produtos</p>
-    </header>
-
-    <form id="meuFormulario" class="p-6 space-y-8 flex-grow">
+    <!-- Container com largura máxima reduzida para não esticar em telas maiores -->
+    <div class="max-w-[360px] mx-auto bg-white min-h-screen shadow-xl border-x border-gray-200">
         
-        <!-- SEÇÃO DE IDENTIFICAÇÃO -->
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 bg-gray-50 p-6 rounded-3xl border border-gray-200 sombra-mobile">
-            <div>
-                <label class="block text-[10px] font-black text-green-700 mb-2 uppercase tracking-widest italic">1. Nome do Produtor / Responsável</label>
-                <input type="text" name="nome" id="nomeProdutor" 
-                       class="w-full p-4 border-2 border-gray-200 rounded-xl focus:border-green-600 outline-none text-xl font-bold uppercase text-black" 
-                       placeholder="DIGITE O NOME" required>
+        <!-- Cabeçalho Compacto -->
+        <div class="bg-green-700 p-4 text-white text-center shadow-sm">
+            <h1 class="text-2xl font-black uppercase tracking-tighter italic">Cooperativa<br>Familiar</h1>
+            <div class="mt-1 h-1 w-12 bg-yellow-400 mx-auto"></div>
+            <p class="text-[8px] font-bold opacity-90 mt-1 uppercase tracking-widest">Sistema de Entrega</p>
+        </div>
+
+        <form id="meuFormulario" class="p-3 space-y-4">
+            
+            <!-- Campos de Identificação Menores -->
+            <div class="grid grid-cols-2 gap-2 bg-gray-50 p-3 rounded-lg border border-gray-300">
+                <div class="col-span-2">
+                    <label class="block text-[10px] font-black text-gray-700 mb-0.5 uppercase italic">1. Nome do produtor</label>
+                    <input type="text" name="nome" class="w-full p-2 border border-gray-300 rounded focus:border-green-600 outline-none text-sm font-bold text-black" placeholder="Digite o aqui" required>
+                </div>
+                <div class="col-span-2">
+                    <label class="block text-[10px] font-black text-gray-700 mb-0.5 uppercase italic">2. Data</label>
+                    <input type="date" name="data" id="campoData" class="w-full p-2 border border-gray-300 rounded focus:border-green-600 outline-none text-sm font-bold text-black" required>
+                </div>
             </div>
-            <div>
-                <label class="block text-[10px] font-black text-green-700 mb-2 uppercase tracking-widest italic">2. Data da Operação</label>
-                <input type="date" name="data" id="campoData" 
-                       class="w-full p-4 border-2 border-gray-200 rounded-xl focus:border-green-600 outline-none text-xl font-bold text-black" required>
+
+            <!-- Instrução Compacta -->
+            <div class="flex items-center gap-2 py-2 px-3 bg-yellow-50 border-l-4 border-yellow-400 rounded-r">
+                <span class="text-lg">✍️</span>
+                <p class="text-[9px] font-bold text-yellow-900 uppercase leading-tight">
+                    Digite a quantidade ao lado do produto.
+                </p>
             </div>
+
+            <!-- Tabela Super Densa -->
+            <div class="border border-black rounded overflow-hidden bg-white">
+                <table class="w-full border-collapse fonte-cupom">
+                    <thead>
+                        <tr class="cabecalho-tabela">
+                            <th class="border-b border-black p-2 text-[10px] font-black uppercase text-left w-2/3">PRODUTO</th>
+                            <th class="border-b border-black p-2 text-[10px] font-black uppercase text-center w-1/3">QTD.</th>
+                        </tr>
+                    </thead>
+                    <tbody id="listaProdutos" class="divide-y divide-gray-100">
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Botão de Enviar Menor e Fixo -->
+            <div class="sticky bottom-2 pt-2">
+                <button 
+                    type="submit"
+                    id="btnEnviar"
+                    class="w-full bg-green-600 hover:bg-green-700 text-white py-4 rounded-xl font-black text-lg btn-shadow transition-all transform uppercase flex items-center justify-center gap-2"
+                >
+                    <span>ENVIAR AGORA</span>
+                    <span class="text-xl">➔</span>
+                </button>
+            </div>
+        </form>
+
+        <div class="text-center text-gray-400 text-[8px] py-6 uppercase font-bold tracking-widest">
+            *** FIM DO FORMULÁRIO ***
         </div>
-
-        <!-- TABELA DE CONFERÊNCIA -->
-        <div class="border-2 border-black rounded-2xl overflow-hidden bg-white sombra-mobile">
-            <table class="w-full border-collapse fonte-cupom">
-                <thead>
-                    <tr class="cabecalho-tabela">
-                        <th class="border-b-2 border-black p-4 text-sm font-black uppercase text-left w-3/5">DESCRIÇÃO DO PRODUTO</th>
-                        <th class="border-b-2 border-black p-4 text-sm font-black uppercase text-center w-2/5">QUANTIDADE (UN/KG)</th>
-                    </tr>
-                </thead>
-                <tbody id="listaProdutos" class="divide-y divide-gray-200">
-                    <!-- Gerado dinamicamente -->
-                </tbody>
-            </table>
-        </div>
-
-        <!-- BOTÕES (ESCONDIDOS NA IMPRESSÃO) -->
-        <div class="no-print space-y-4 pt-4 pb-10">
-            <button type="submit" id="btnEnviar" class="w-full bg-green-600 hover:bg-green-700 text-white py-6 rounded-2xl font-black text-2xl shadow-lg transition-all transform active:scale-95 flex items-center justify-center gap-4">
-                ENVIAR E SALVAR SOMA
-            </button>
-            <button type="button" onclick="window.print()" class="w-full bg-gray-800 hover:bg-black text-white py-4 rounded-2xl font-bold text-lg transition-all flex items-center justify-center gap-2">
-                🖨️ IMPRIMIR RECIBO
-            </button>
-        </div>
-    </form>
-
-    <footer class="bg-gray-100 p-8 text-center border-t border-gray-200">
-        <p class="text-[10px] font-black text-gray-400 uppercase tracking-[0.5em]">--- CONTROLE INTERNO CLAF ---</p>
-    </footer>
-</div>
-
-<!-- MODAL DE SUCESSO -->
-<div id="modalSucesso" class="fixed inset-0 bg-black/90 hidden items-center justify-center p-6 z-50 backdrop-blur-md no-print">
-    <div class="bg-white p-10 rounded-[3rem] text-center max-w-sm w-full border-[10px] border-green-500 shadow-2xl animate-pop">
-        <div class="w-20 h-20 bg-green-100 text-green-600 rounded-full flex items-center justify-center mx-auto mb-6 text-5xl">✓</div>
-        <h2 class="text-3xl font-black text-green-800 uppercase mb-2">SALVO!</h2>
-        <p class="text-gray-500 font-bold mb-8 text-sm uppercase">A soma foi processada na aba ORGANIZAÇÃO_DE_DADOS.</p>
-        <button onclick="location.reload()" class="w-full bg-green-700 text-white py-5 rounded-2xl font-black uppercase tracking-tighter">FAZER NOVO</button>
     </div>
-</div>
 
-<script>
-    const produtos = ["Abacate", "Abacaxi", "Banana caturra", "Banana maçã ou prata", "Laranja baiana lima", "Laranja Comum", "Maçã", "Mamão", "Manga", "Maracujá", "Melancia", "Melão", "Pera", "Pêssego", "Tangerina poncã", "Almeirão", "Acelga", "Agrião", "Alface", "Couve Manteiga", "Escarola", "Espinafre", "Quiabo", "Repolho", "Rúcula", "Abobrinha verde", "Beterraba", "Brócolis", "Cenoura", "Chuchu", "Couve flor", "Milho verde", "Pepino", "Tomate", "Vagem", "Leite Pasteurizado", "Pão Caseiro", "Alho poró", "Cebola", "Cebolinha Verde", "Limão", "Pimentão", "Rabanete", "Salsinha", "Batata doce", "Batata inglesa", "Iogurte"];
+    <!-- Modal Sucesso -->
+    <div id="modalSucesso" class="fixed inset-0 bg-black/80 hidden items-center justify-center p-4 z-50">
+        <div class="bg-white p-6 rounded-2xl text-center max-w-[280px] w-full border-4 border-green-500 shadow-2xl animate-pop">
+            <div class="w-14 h-14 bg-green-100 text-green-600 rounded-full flex items-center justify-center mx-auto mb-3 text-3xl font-bold">
+                ✓
+            </div>
+            <h2 class="text-xl font-black text-green-700 uppercase mb-1">Enviado!</h2>
+            <p class="text-gray-600 font-bold mb-4 text-xs italic text-center">Pedido recebido com sucesso.</p>
+            <button onclick="location.reload()" class="w-full bg-green-600 text-white py-3 rounded-lg font-black uppercase text-sm">
+                FECHAR
+            </button>
+        </div>
+    </div>
 
-    // Configura data atual
-    document.getElementById('campoData').value = new Date().toISOString().split('T')[0];
+    <script>
+        const produtos = [
+            "Abacate", "Abacaxi", "Banana caturra", "Banana maçã ou prata", "Laranja baiana lima", 
+            "Laranja Comum", "Maçã", "Mamão", "Manga", "Maracujá", "Melancia", "Melão", "Pera", 
+            "Pêssego", "Tangerina poncã", "Almeirão", "Acelga", "Agrião", 
+            "Alface", "Couve Manteiga", "Escarola", "Espinafre", "Quiabo", "Repolho", 
+            "Rúcula", "Abobrinha verde", "Beterraba", "Brócolis", "Cenoura", "Chuchu", 
+            "Couve flor", "Milho verde", "Pepino", "Tomate", "Vagem", "Leite Pasteurizado", 
+            "Pão Caseiro", "Alho poró", "Cebola", "Cebolinha Verde", "Limão", "Pimentão", 
+            "Rabanete", "Salsinha", "Batata doce", "Batata inglesa", "Iogurte"
+        ];
 
-    const tbody = document.getElementById('listaProdutos');
-    produtos.forEach((prod) => {
-        const tr = document.createElement('tr');
-        // O ID de envio deve ser consistente para a soma na planilha
-        const idKey = prod.normalize('NFD').replace(/[\u0300-\u036f]/g, "").replace(/\s+/g, '_').toUpperCase();
-        
-        tr.innerHTML = `
-            <td class="p-4 font-bold text-gray-700 uppercase border-r border-gray-100">${prod}</td>
-            <td class="p-2">
-                <input type="number" name="${idKey}" step="any" inputmode="decimal"
-                       class="w-full p-3 text-center text-xl font-black bg-gray-50 rounded-lg outline-none focus:bg-yellow-50 transition-colors text-black" 
-                       placeholder="-">
-            </td>
-        `;
-        tbody.appendChild(tr);
-    });
+        document.getElementById('campoData').value = new Date().toISOString().split('T')[0];
 
-    document.getElementById('meuFormulario').addEventListener('submit', function(e) {
-        e.preventDefault();
+        const tbody = document.getElementById('listaProdutos');
+        produtos.forEach((prod, index) => {
+            const tr = document.createElement('tr');
+            tr.className = "item-row border-b border-gray-100 items-center";
+            const idPlanilha = prod.normalize('NFD').replace(/[\u0300-\u036f]/g, "").replace(/\s+/g, '_');
+            
+            tr.innerHTML = `
+                <td class="p-2">
+                    <label class="flex items-center gap-2 cursor-pointer select-none">
+                        <input type="checkbox" id="check_${index}" class="w-4 h-4 rounded border-gray-300 text-green-600">
+                        <span class="text-[11px] font-bold text-gray-800 uppercase tracking-tighter">${prod}</span>
+                    </label>
+                </td>
+                <td class="p-1">
+                    <input type="number" name="${idPlanilha}" min="0" inputmode="numeric"
+                           class="w-full p-1.5 border border-gray-200 rounded text-center text-sm font-black bg-gray-50 focus:bg-white focus:border-green-500 outline-none text-black"
+                           placeholder="0"
+                           oninput="document.getElementById('check_${index}').checked = (this.value > 0)">
+                </td>
+            `;
+            tbody.appendChild(tr);
+        });
+
+        const form = document.getElementById('meuFormulario');
+        const modal = document.getElementById('modalSucesso');
         const btn = document.getElementById('btnEnviar');
-        const URL_DO_SCRIPT = "https://script.google.com/macros/s/AKfycbwj9Pw6zH5ZVKVjqS5eomVO6kHSZUbtNmcVr6DeA8EmISvqmyTNtwuo-MWlwrdFCl17/exec";
 
-        btn.disabled = true;
-        btn.innerHTML = "PROCESSANDO SOMA...";
+        form.addEventListener('submit', function(e) {
+            e.preventDefault();
+            const URL_DO_SCRIPT = "https://script.google.com/macros/s/AKfycbwj9Pw6zH5ZVKVjqS5eomVO6kHSZUbtNmcVr6DeA8EmISvqmyTNtwuo-MWlwrdFCl17/exec";
 
-        const formData = new FormData(this);
-        const params = new URLSearchParams();
-        
-        // Garante que o nome do produtor vá em maiúsculas para evitar duplicidade na soma
-        formData.forEach((value, key) => {
-            if (value && value !== "0" && value !== "") {
-                if (key === "nome") {
-                    params.append(key, value.trim().toUpperCase());
-                } else {
+            btn.disabled = true;
+            btn.innerHTML = `<span class="animate-pulse text-sm">ENVIANDO...</span>`;
+
+            const formData = new FormData(this);
+            const params = new URLSearchParams();
+            
+            formData.forEach((value, key) => {
+                if (value && value !== "0" && value !== "") {
                     params.append(key, value);
                 }
-            }
+            });
+
+            if(!params.has('timestamp')) params.append('timestamp', new Date().toLocaleString('pt-BR'));
+
+            fetch(URL_DO_SCRIPT, {
+                method: 'POST',
+                mode: 'no-cors',
+                body: params
+            })
+            .then(() => {
+                modal.style.display = 'flex';
+                form.reset();
+                btn.disabled = false;
+                btn.innerHTML = `<span>ENVIAR AGORA</span><span class="text-xl">➔</span>`;
+            })
+            .catch(() => {
+                alert("Erro ao enviar!");
+                btn.disabled = false;
+                btn.innerHTML = `<span>ENVIAR AGORA</span>`;
+            });
         });
 
-        fetch(URL_DO_SCRIPT, { method: 'POST', mode: 'no-cors', body: params })
-        .then(() => {
-            document.getElementById('modalSucesso').style.display = 'flex';
-            window.scrollTo(0,0);
-        })
-        .catch(() => {
-            alert("Erro ao salvar! Verifique a internet.");
-            btn.disabled = false;
-            btn.innerHTML = "ENVIAR E SALVAR SOMA";
-        });
-    });
-</script>
-
+        function fecharModal() {
+            modal.style.display = 'none';
+        }
+    </script>
 </body>
 </html>
