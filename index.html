@@ -1,160 +1,119 @@
-<!DOCTYPE html>
-<html lang="pt-BR">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Cooperativa Familiar - Pedidos</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <style>
-        @import url('https://fonts.googleapis.com/css2?family=Courier+Prime:wght@400;700&display=swap');
-        .fonte-cupom { font-family: 'Courier Prime', monospace; }
-        .cabecalho-tabela { background-color: #ffff00; }
-        input[type="number"] { -moz-appearance: textfield; appearance: textfield; }
-        input[type="number"]::-webkit-inner-spin-button, input[type="number"]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
-        input { color: #000 !important; }
-        @keyframes pop { 0% { transform: scale(0.8); opacity: 0; } 100% { transform: scale(1); opacity: 1; } }
-        .animate-pop { animation: pop 0.3s ease-out forwards; }
-        .btn-shadow { box-shadow: 0 4px 0 rgb(21, 128, 61); }
-        .btn-shadow:active { box-shadow: none; transform: translateY(2px); }
-    </style>
-</head>
-<body class="bg-gray-100 min-h-screen pb-6 font-sans">
+/**
+ * SISTEMA COOPERATIVA FAMILIAR - VERSÃO GITHUB ESTÁVEL
+ * * Este código realiza duas funções principais:
+ * 1. REGISTRO DE DADOS: Salva cada entrega em uma linha nova na primeira aba (Histórico).
+ * 2. ORGANIZAÇÃO DE DADOS: Soma as quantidades automaticamente na aba "ORGANIZAÇÃO_DE_DADOS",
+ * evitando duplicar nomes de produtores e somando valores na mesma célula.
+ */
 
-    <div class="max-w-[360px] mx-auto bg-white min-h-screen shadow-xl border-x border-gray-200">
-        <!-- Cabeçalho -->
-        <div class="bg-green-700 p-4 text-white text-center shadow-sm">
-            <h1 class="text-2xl font-black uppercase tracking-tighter italic">Cooperativa<br>Familiar</h1>
-            <div class="mt-1 h-1 w-12 bg-yellow-400 mx-auto"></div>
-            <p class="text-[8px] font-bold opacity-90 mt-1 uppercase tracking-widest">Sistema de Entrega</p>
-        </div>
+function doPost(e) {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  // Aba 1: Onde ficam os registros individuais (Histórico)
+  const sheetHistorico = ss.getSheets()[0]; 
+  
+  // Nome da aba para consolidação (Soma Mensal)
+  const NOME_ABA_CONSOLIDADO = "ORGANIZAÇÃO_DE_DADOS";
+  
+  // Localiza ou cria a aba de organização caso não exista
+  let sheetConsolidado = ss.getSheetByName(NOME_ABA_CONSOLIDADO);
+  if (!sheetConsolidado) {
+    sheetConsolidado = ss.insertSheet(NOME_ABA_CONSOLIDADO);
+  }
 
-        <form id="meuFormulario" class="p-3 space-y-4">
-            <!-- Identificação -->
-            <div class="grid grid-cols-2 gap-2 bg-gray-50 p-3 rounded-lg border border-gray-300">
-                <div class="col-span-2">
-                    <label class="block text-[10px] font-black text-gray-700 mb-0.5 uppercase italic">1. Nome do produtor</label>
-                    <input type="text" name="nome" id="inputNome" class="w-full p-2 border border-gray-300 rounded focus:border-green-600 outline-none text-sm font-bold text-black" placeholder="Seu nome completo" required>
-                </div>
-                <div class="col-span-2">
-                    <label class="block text-[10px] font-black text-gray-700 mb-0.5 uppercase italic">2. Data</label>
-                    <input type="date" name="data" id="campoData" class="w-full p-2 border border-gray-300 rounded focus:border-green-600 outline-none text-sm font-bold text-black" required>
-                </div>
-            </div>
+  const data = e.parameter;
 
-            <!-- Tabela de Produtos -->
-            <div class="border border-black rounded overflow-hidden bg-white">
-                <table class="w-full border-collapse fonte-cupom">
-                    <thead>
-                        <tr class="cabecalho-tabela">
-                            <th class="border-b border-black p-2 text-[10px] font-black uppercase text-left w-2/3">PRODUTO</th>
-                            <th class="border-b border-black p-2 text-[10px] font-black uppercase text-center w-1/3">QTD.</th>
-                        </tr>
-                    </thead>
-                    <tbody id="listaProdutos" class="divide-y divide-gray-100">
-                        <!-- Gerado via JavaScript -->
-                    </tbody>
-                </table>
-            </div>
+  // Padronização: Nome do produtor sempre em MAIÚSCULAS
+  if (data.nome) {
+    data.nome = data.nome.toUpperCase();
+  }
+  
+  // LockService impede que envios simultâneos causem erros de escrita na planilha
+  const lock = LockService.getScriptLock();
+  
+  try {
+    // Aguarda até 30 segundos para obter acesso exclusivo à planilha
+    lock.waitLock(30000);
 
-            <!-- Botão Enviar -->
-            <div class="sticky bottom-2 pt-2">
-                <button type="submit" id="btnEnviar" class="w-full bg-green-600 hover:bg-green-700 text-white py-4 rounded-xl font-black text-lg btn-shadow transition-all transform uppercase flex items-center justify-center gap-2">
-                    <span>ENVIAR AGORA</span>
-                    <span class="text-xl">➔</span>
-                </button>
-            </div>
-        </form>
-    </div>
+    // --- PARTE 1: GRAVAÇÃO NO HISTÓRICO (RECEBIMENTO_DE_DADOS) ---
+    if (sheetHistorico.getLastColumn() === 0) {
+      sheetHistorico.appendRow(["TIMESTAMP", "NOME", "DATA"]);
+      sheetHistorico.getRange(1, 1, 1, 3).setFontWeight("bold");
+    }
+    
+    let headersHist = sheetHistorico.getRange(1, 1, 1, Math.max(sheetHistorico.getLastColumn(), 1)).getValues()[0];
+    
+    // Verifica se há novos produtos e cria colunas no cabeçalho do histórico
+    Object.keys(data).forEach(key => {
+      if (headersHist.indexOf(key.toUpperCase()) === -1 && key !== "timestamp") {
+        sheetHistorico.getRange(1, sheetHistorico.getLastColumn() + 1).setValue(key.toUpperCase()).setFontWeight("bold");
+        headersHist.push(key.toUpperCase());
+      }
+    });
 
-    <!-- Modal de Sucesso -->
-    <div id="modalSucesso" class="fixed inset-0 bg-black/80 hidden items-center justify-center p-4 z-50">
-        <div class="bg-white p-6 rounded-2xl text-center max-w-[280px] w-full border-4 border-green-500 shadow-2xl animate-pop">
-            <div class="w-14 h-14 bg-green-100 text-green-600 rounded-full flex items-center justify-center mx-auto mb-3 text-3xl font-bold">✓</div>
-            <h2 class="text-xl font-black text-green-700 uppercase mb-1">Enviado!</h2>
-            <p class="text-gray-600 font-bold mb-4 text-xs italic text-center">Pedido recebido com sucesso.</p>
-            <button onclick="location.reload()" class="w-full bg-green-600 text-white py-3 rounded-lg font-black uppercase text-sm">FECHAR</button>
-        </div>
-    </div>
+    // Monta a linha para o histórico convertendo texto em número onde necessário
+    const rowHist = headersHist.map(h => {
+      if (h === "TIMESTAMP") return new Date().toLocaleString('pt-BR');
+      const val = data[Object.keys(data).find(k => k.toUpperCase() === h)];
+      
+      // Se for coluna de produto, garante que seja gravado como número para somas no Sheets
+      if (h !== "NOME" && h !== "DATA" && val) {
+        return parseFloat(val.toString().replace(',', '.')) || 0;
+      }
+      return val || "";
+    });
+    sheetHistorico.appendRow(rowHist);
 
-    <script>
-        // Lista oficial de produtos
-        const produtos = ["Abacate", "Abacaxi", "Banana caturra", "Banana maçã ou prata", "Laranja baiana lima", "Laranja Comum", "Maçã", "Mamão", "Manga", "Maracujá", "Melancia", "Melão", "Pera", "Pêssego", "Tangerina poncã", "Almeirão", "Acelga", "Agrião", "Alface", "Couve Manteiga", "Escarola", "Espinafre", "Quiabo", "Repolho", "Rúcula", "Abobrinha verde", "Beterraba", "Brócolis", "Cenoura", "Chuchu", "Couve flor", "Milho verde", "Pepino", "Tomate", "Vagem", "Leite Pasteurizado", "Pão Caseiro", "Alho poró", "Cebola", "Cebolinha Verde", "Limão", "Pimentão", "Rabanete", "Salsinha", "Batata doce", "Batata inglesa", "Iogurte"];
 
-        // Data padrão (hoje)
-        document.getElementById('campoData').value = new Date().toISOString().split('T')[0];
-        
-        const tbody = document.getElementById('listaProdutos');
+    // --- PARTE 2: LÓGICA DE SOMA (ORGANIZAÇÃO_DE_DADOS) ---
+    // Coluna A = Nome do Produto | Colunas B, C, D... = Nomes dos Produtores
+    
+    const nomeProdutor = data.nome;
+    const ultimaColCons = Math.max(sheetConsolidado.getLastColumn(), 1);
+    let headersCons = sheetConsolidado.getRange(1, 1, 1, ultimaColCons).getValues()[0];
+    
+    // 1. Localiza a coluna do produtor ou cria uma nova se não existir
+    let colProdutor = headersCons.indexOf(nomeProdutor) + 1;
+    if (colProdutor === 0) {
+      colProdutor = ultimaColCons + 1;
+      sheetConsolidado.getRange(1, colProdutor).setValue(nomeProdutor).setFontWeight("bold");
+    }
 
-        // Gerar linhas da tabela
-        produtos.forEach((prod, index) => {
-            const tr = document.createElement('tr');
-            tr.className = "item-row border-b border-gray-100";
-            // Normaliza o ID para o Google Script (sem espaços ou acentos)
-            const idPlanilha = prod.normalize('NFD').replace(/[\u0300-\u036f]/g, "").replace(/\s+/g, '_');
-            
-            tr.innerHTML = `
-                <td class="p-2">
-                    <label class="flex items-center gap-2 cursor-pointer select-none">
-                        <input type="checkbox" id="check_${index}" class="w-4 h-4 rounded border-gray-300">
-                        <span class="text-[11px] font-bold text-gray-800 uppercase tracking-tighter">${prod}</span>
-                    </label>
-                </td>
-                <td class="p-1">
-                    <input type="number" name="${idPlanilha}" min="0" step="any" inputmode="decimal"
-                           class="w-full p-1.5 border border-gray-200 rounded text-center text-sm font-black bg-gray-50 focus:bg-white outline-none text-black"
-                           placeholder="0"
-                           oninput="document.getElementById('check_${index}').checked = (this.value > 0 && this.value !== '')">
-                </td>
-            `;
-            tbody.appendChild(tr);
-        });
+    // 2. Itera sobre os dados recebidos para somar as quantidades
+    Object.keys(data).forEach(key => {
+      if (key !== "nome" && key !== "data" && key !== "timestamp") {
+        const nomeProd = key.replace(/_/g, " ").toUpperCase();
+        const qtdNova = parseFloat(data[key].toString().replace(',', '.')) || 0;
 
-        const form = document.getElementById('meuFormulario');
-        const btn = document.getElementById('btnEnviar');
+        if (qtdNova > 0) {
+          let ultimaLinhaCons = Math.max(sheetConsolidado.getLastRow(), 1);
+          let listaProdsCons = sheetConsolidado.getRange(1, 1, ultimaLinhaCons, 1).getValues().map(r => r[0].toString().toUpperCase());
+          let linhaProd = listaProdsCons.indexOf(nomeProd) + 1;
 
-        form.addEventListener('submit', function(e) {
-            e.preventDefault();
+          // Se o produto não estiver na Coluna A, adiciona ele em uma nova linha
+          if (linhaProd === 0) {
+            linhaProd = ultimaLinhaCons + 1;
+            sheetConsolidado.getRange(linhaProd, 1).setValue(nomeProd).setFontWeight("bold");
+          }
 
-            if (btn.disabled) return;
+          // RECUPERA VALOR ATUAL E SOMA O NOVO
+          const celula = sheetConsolidado.getRange(linhaProd, colProdutor);
+          const valorAnterior = parseFloat(celula.getValue()) || 0;
+          celula.setValue(valorAnterior + qtdNova);
+        }
+      }
+    });
 
-            // URL do seu Script do Google
-            const URL_DO_SCRIPT = "https://script.google.com/macros/s/AKfycbz1mQPkfF4Wq65t4wqx6CUNj75PXhFB0fAo6uKjk2z_65b1xTwVegvH3me0JMyi4WPN/exec";
+    lock.releaseLock();
+    return ContentService.createTextOutput(JSON.stringify({
+      "status": "Sucesso",
+      "message": "Dados registrados e somados em ORGANIZAÇÃO_DE_DADOS."
+    })).setMimeType(ContentService.MimeType.JSON);
 
-            const formData = new FormData(this);
-            const params = new URLSearchParams();
-            
-            let hasItems = false;
-            formData.forEach((value, key) => {
-                if (value && value !== "0" && value !== "") {
-                    params.append(key, value);
-                    if (key !== "nome" && key !== "data") hasItems = true;
-                }
-            });
-
-            if (!hasItems) {
-                alert("Por favor, preencha a quantidade de pelo menos um produto.");
-                return;
-            }
-
-            // Desativa botão para evitar duplo clique
-            btn.disabled = true;
-            btn.innerHTML = `<span class="animate-pulse">ENVIANDO...</span>`;
-
-            fetch(URL_DO_SCRIPT, {
-                method: 'POST',
-                mode: 'no-cors',
-                body: params
-            })
-            .then(() => {
-                document.getElementById('modalSucesso').style.display = 'flex';
-                window.scrollTo(0,0);
-            })
-            .catch(() => {
-                alert("Erro ao enviar! Verifique sua internet.");
-                btn.disabled = false;
-                btn.innerHTML = `<span>ENVIAR AGORA</span><span class="text-xl">➔</span>`;
-            });
-        });
-    </script>
-</body>
-</html>
+  } catch (err) {
+    if (lock.hasLock()) lock.releaseLock();
+    return ContentService.createTextOutput(JSON.stringify({
+      "status": "Erro", 
+      "message": err.message
+    })).setMimeType(ContentService.MimeType.JSON);
+  }
+}
