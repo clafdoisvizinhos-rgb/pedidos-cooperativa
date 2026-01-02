@@ -1,36 +1,40 @@
 /**
- * Recebe os dados do formulário e organiza em duas frentes:
- * 1. Histórico: Guarda uma linha nova com data (Histórico Completo).
- * 2. Consolidação: Soma as quantidades numa folha de resumo (Total Mensal).
- * Nome da aba de consolidação: ORGANIZAÇÃO_DE_DADOS
+ * SISTEMA COOPERATIVA FAMILIAR
+ * * Este código deve ser colado no repositório do GitHub e no Google Apps Script.
+ * * Funcionalidades:
+ * 1. Gravação de Histórico: Cria uma linha nova para cada entrega.
+ * 2. Consolidação: Soma automaticamente as quantidades na aba ORGANIZAÇÃO_DE_DADOS.
+ * 3. Formatação: Nomes de produtores e cabeçalhos sempre em MAIÚSCULAS.
  */
+
 function doPost(e) {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
-  // Aba 1: Histórico (Onde cada entrega é uma linha)
+  // Aba 1: Histórico (Primeira aba da planilha)
   const sheetHistorico = ss.getSheets()[0]; 
   
-  // Nome específico solicitado pelo utilizador
+  // Nome da aba para soma acumulada
   const NOME_ABA_CONSOLIDADO = "ORGANIZAÇÃO_DE_DADOS";
   
-  // Aba 2: Organização (Onde os dados são somados)
+  // Localiza ou cria a aba de organização
   let sheetConsolidado = ss.getSheetByName(NOME_ABA_CONSOLIDADO);
-  
-  // Se a aba não existir, o script cria-a automaticamente
   if (!sheetConsolidado) {
     sheetConsolidado = ss.insertSheet(NOME_ABA_CONSOLIDADO);
   }
 
   const data = e.parameter;
-  // Garante que o nome do produtor fica em MAIÚSCULAS
-  if (data.nome) data.nome = data.nome.toUpperCase();
+
+  // Padronização: Nome do produtor em MAIÚSCULAS
+  if (data.nome) {
+    data.nome = data.nome.toUpperCase();
+  }
   
+  // LockService evita que dois envios simultâneos causem erro de colisão
   const lock = LockService.getScriptLock();
   
   try {
-    // Tenta obter o bloqueio por até 30 segundos para evitar erros em envios simultâneos
-    lock.waitLock(30000);
+    lock.waitLock(30000); // Aguarda até 30 segundos
 
-    // --- PARTE 1: GUARDAR NO HISTÓRICO (LÓGICA PADRÃO) ---
+    // --- PARTE 1: REGISTO NO HISTÓRICO ---
     if (sheetHistorico.getLastColumn() === 0) {
       sheetHistorico.appendRow(["TIMESTAMP", "NOME", "DATA"]);
       sheetHistorico.getRange(1, 1, 1, 3).setFontWeight("bold");
@@ -38,6 +42,7 @@ function doPost(e) {
     
     let headersHist = sheetHistorico.getRange(1, 1, 1, Math.max(sheetHistorico.getLastColumn(), 1)).getValues()[0];
     
+    // Adiciona colunas para novos produtos no histórico
     Object.keys(data).forEach(key => {
       if (headersHist.indexOf(key.toUpperCase()) === -1 && key !== "timestamp") {
         sheetHistorico.getRange(1, sheetHistorico.getLastColumn() + 1).setValue(key.toUpperCase()).setFontWeight("bold");
@@ -48,7 +53,7 @@ function doPost(e) {
     const rowHist = headersHist.map(h => {
       if (h === "TIMESTAMP") return new Date().toLocaleString('pt-BR');
       const val = data[Object.keys(data).find(k => k.toUpperCase() === h)];
-      // Converte quantidades para números para permitir somas futuras
+      // Converte para número para permitir cálculos
       if (h !== "NOME" && h !== "DATA" && val) {
         return parseFloat(val.toString().replace(',', '.')) || 0;
       }
@@ -57,23 +62,20 @@ function doPost(e) {
     sheetHistorico.appendRow(rowHist);
 
 
-    // --- PARTE 2: SOMAR NA PLANILHA DE ORGANIZAÇÃO (CONSOLIDAÇÃO) ---
-    // Estrutura: Coluna A = Produtos | Colunas B, C, D... = Produtores
-    
+    // --- PARTE 2: SOMA AUTOMÁTICA (ORGANIZAÇÃO_DE_DADOS) ---
     const nomeProdutor = data.nome;
     const ultimaColCons = Math.max(sheetConsolidado.getLastColumn(), 1);
     let headersCons = sheetConsolidado.getRange(1, 1, 1, ultimaColCons).getValues()[0];
     
-    // 1. Localizar ou criar coluna do Produtor no cabeçalho
+    // Localiza ou cria a coluna do Produtor
     let colProdutor = headersCons.indexOf(nomeProdutor) + 1;
     if (colProdutor === 0) {
       colProdutor = ultimaColCons + 1;
       sheetConsolidado.getRange(1, colProdutor).setValue(nomeProdutor).setFontWeight("bold");
     }
 
-    // 2. Lançar produtos somando os valores existentes
+    // Processa cada produto enviado somando ao valor existente
     Object.keys(data).forEach(key => {
-      // Ignora campos que não são produtos
       if (key !== "nome" && key !== "data" && key !== "timestamp") {
         const nomeProd = key.replace(/_/g, " ").toUpperCase();
         const qtdNova = parseFloat(data[key].toString().replace(',', '.')) || 0;
@@ -83,17 +85,15 @@ function doPost(e) {
           let listaProdsCons = sheetConsolidado.getRange(1, 1, ultimaLinhaCons, 1).getValues().map(r => r[0].toString().toUpperCase());
           let linhaProd = listaProdsCons.indexOf(nomeProd) + 1;
 
-          // Se o produto não existe na lista lateral (Coluna A), adiciona-o
+          // Se o produto não existe na lista lateral, cria a linha
           if (linhaProd === 0) {
             linhaProd = ultimaLinhaCons + 1;
             sheetConsolidado.getRange(linhaProd, 1).setValue(nomeProd).setFontWeight("bold");
           }
 
-          // Realiza a soma do valor atual com o novo valor enviado
+          // Ação de somar: Valor Atual + Quantidade Nova
           const celula = sheetConsolidado.getRange(linhaProd, colProdutor);
           const valorAtual = parseFloat(celula.getValue()) || 0;
-          
-          // Define o novo valor somado
           celula.setValue(valorAtual + qtdNova);
         }
       }
@@ -102,7 +102,7 @@ function doPost(e) {
     lock.releaseLock();
     return ContentService.createTextOutput(JSON.stringify({
       "status": "Sucesso",
-      "message": "Dados processados e SOMADOS em ORGANIZAÇÃO_DE_DADOS"
+      "message": "Dados processados e somados."
     })).setMimeType(ContentService.MimeType.JSON);
 
   } catch (err) {
