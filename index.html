@@ -1,284 +1,115 @@
-<!DOCTYPE html>
-<html lang="pt-PT">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Cooperativa Familiar - Pedidos</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Biblioteca para gerar PDF -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
-    <style>
-        @import url('https://fonts.googleapis.com/css2?family=Courier+Prime:wght@400;700&display=swap');
-        .fonte-cupom { font-family: 'Courier Prime', monospace; }
-        .cabecalho-tabela { background-color: #ffff00; }
-        input[type="number"] { -moz-appearance: textfield; appearance: textfield; }
-        input[type="number"]::-webkit-inner-spin-button, input[type="number"]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
-        input { color: #000 !important; }
-        
-        /* Estilos para o Modal */
-        @keyframes pop { 0% { transform: scale(0.8); opacity: 0; } 100% { transform: scale(1); opacity: 1; } }
-        .animate-pop { animation: pop 0.3s ease-out forwards; }
-        .btn-shadow { box-shadow: 0 4px 0 rgb(21, 128, 61); }
-        .btn-shadow:active { box-shadow: none; transform: translateY(2px); }
+/**
+ * Recebe os dados do formulário e organiza em duas frentes:
+ * 1. Histórico: Guarda uma linha nova com data (Histórico Completo).
+ * 2. Consolidação: Soma as quantidades numa folha de resumo (Total Mensal).
+ * Nome da aba de consolidação: ORGANIZAÇÃO_DE_DADOS
+ */
+function doPost(e) {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  // Aba 1: Histórico (Onde cada entrega é uma linha)
+  const sheetHistorico = ss.getSheets()[0]; 
+  
+  // Nome específico solicitado pelo utilizador
+  const NOME_ABA_CONSOLIDADO = "ORGANIZAÇÃO_DE_DADOS";
+  
+  // Aba 2: Organização (Onde os dados são somados)
+  let sheetConsolidado = ss.getSheetByName(NOME_ABA_CONSOLIDADO);
+  
+  // Se a aba não existir, o script cria-a automaticamente
+  if (!sheetConsolidado) {
+    sheetConsolidado = ss.insertSheet(NOME_ABA_CONSOLIDADO);
+  }
 
-        /* Estilo do Overlay de Geração de PDF */
-        #wrapper-pdf {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: #ffffff;
-            display: none;
-            flex-direction: column;
-            align-items: center;
-            justify-content: flex-start;
-            padding-top: 20px;
-            z-index: 99999;
+  const data = e.parameter;
+  // Garante que o nome do produtor fica em MAIÚSCULAS
+  if (data.nome) data.nome = data.nome.toUpperCase();
+  
+  const lock = LockService.getScriptLock();
+  
+  try {
+    // Tenta obter o bloqueio por até 30 segundos para evitar erros em envios simultâneos
+    lock.waitLock(30000);
+
+    // --- PARTE 1: GUARDAR NO HISTÓRICO (LÓGICA PADRÃO) ---
+    if (sheetHistorico.getLastColumn() === 0) {
+      sheetHistorico.appendRow(["TIMESTAMP", "NOME", "DATA"]);
+      sheetHistorico.getRange(1, 1, 1, 3).setFontWeight("bold");
+    }
+    
+    let headersHist = sheetHistorico.getRange(1, 1, 1, Math.max(sheetHistorico.getLastColumn(), 1)).getValues()[0];
+    
+    Object.keys(data).forEach(key => {
+      if (headersHist.indexOf(key.toUpperCase()) === -1 && key !== "timestamp") {
+        sheetHistorico.getRange(1, sheetHistorico.getLastColumn() + 1).setValue(key.toUpperCase()).setFontWeight("bold");
+        headersHist.push(key.toUpperCase());
+      }
+    });
+
+    const rowHist = headersHist.map(h => {
+      if (h === "TIMESTAMP") return new Date().toLocaleString('pt-BR');
+      const val = data[Object.keys(data).find(k => k.toUpperCase() === h)];
+      // Converte quantidades para números para permitir somas futuras
+      if (h !== "NOME" && h !== "DATA" && val) {
+        return parseFloat(val.toString().replace(',', '.')) || 0;
+      }
+      return val || "";
+    });
+    sheetHistorico.appendRow(rowHist);
+
+
+    // --- PARTE 2: SOMAR NA PLANILHA DE ORGANIZAÇÃO (CONSOLIDAÇÃO) ---
+    // Estrutura: Coluna A = Produtos | Colunas B, C, D... = Produtores
+    
+    const nomeProdutor = data.nome;
+    const ultimaColCons = Math.max(sheetConsolidado.getLastColumn(), 1);
+    let headersCons = sheetConsolidado.getRange(1, 1, 1, ultimaColCons).getValues()[0];
+    
+    // 1. Localizar ou criar coluna do Produtor no cabeçalho
+    let colProdutor = headersCons.indexOf(nomeProdutor) + 1;
+    if (colProdutor === 0) {
+      colProdutor = ultimaColCons + 1;
+      sheetConsolidado.getRange(1, colProdutor).setValue(nomeProdutor).setFontWeight("bold");
+    }
+
+    // 2. Lançar produtos somando os valores existentes
+    Object.keys(data).forEach(key => {
+      // Ignora campos que não são produtos
+      if (key !== "nome" && key !== "data" && key !== "timestamp") {
+        const nomeProd = key.replace(/_/g, " ").toUpperCase();
+        const qtdNova = parseFloat(data[key].toString().replace(',', '.')) || 0;
+
+        if (qtdNova > 0) {
+          let ultimaLinhaCons = Math.max(sheetConsolidado.getLastRow(), 1);
+          let listaProdsCons = sheetConsolidado.getRange(1, 1, ultimaLinhaCons, 1).getValues().map(r => r[0].toString().toUpperCase());
+          let linhaProd = listaProdsCons.indexOf(nomeProd) + 1;
+
+          // Se o produto não existe na lista lateral (Coluna A), adiciona-o
+          if (linhaProd === 0) {
+            linhaProd = ultimaLinhaCons + 1;
+            sheetConsolidado.getRange(linhaProd, 1).setValue(nomeProd).setFontWeight("bold");
+          }
+
+          // Realiza a soma do valor atual com o novo valor enviado
+          const celula = sheetConsolidado.getRange(linhaProd, colProdutor);
+          const valorAtual = parseFloat(celula.getValue()) || 0;
+          
+          // Define o novo valor somado
+          celula.setValue(valorAtual + qtdNova);
         }
+      }
+    });
 
-        /* Ajuste fino para o container do cupom no PDF */
-        #conteudoPdfExport {
-            background: white;
-            width: 76mm; 
-            padding: 4mm;
-            border: none;
-        }
-    </style>
-</head>
-<body class="bg-gray-100 min-h-screen pb-6 font-sans">
+    lock.releaseLock();
+    return ContentService.createTextOutput(JSON.stringify({
+      "status": "Sucesso",
+      "message": "Dados processados e SOMADOS em ORGANIZAÇÃO_DE_DADOS"
+    })).setMimeType(ContentService.MimeType.JSON);
 
-    <div class="max-w-[360px] mx-auto bg-white min-h-screen shadow-xl border-x border-gray-200 relative z-10">
-        <!-- Cabeçalho Principal -->
-        <div class="bg-green-700 p-6 text-white text-center shadow-sm">
-            <h1 class="text-xl font-bold uppercase tracking-tight italic opacity-90">Cooperativa</h1>
-            <h2 class="text-5xl font-black uppercase tracking-tighter text-yellow-400 -mt-1">CLAF</h2>
-            <div class="mt-2 h-1 w-16 bg-white mx-auto opacity-50"></div>
-            <p class="text-[9px] font-bold opacity-80 mt-2 uppercase tracking-widest">Sistema de Entrega</p>
-        </div>
-
-        <form id="meuFormulario" class="p-3 space-y-4">
-            <!-- Nome e Data -->
-            <div class="grid grid-cols-2 gap-2 bg-gray-50 p-3 rounded-lg border border-gray-300">
-                <div class="col-span-2">
-                    <label class="block text-[10px] font-black text-gray-700 mb-0.5 uppercase italic">1. Nome do produtor</label>
-                    <input type="text" name="nome" id="inputNome" class="w-full p-2 border border-gray-300 rounded focus:border-green-600 outline-none text-sm font-bold text-black" placeholder="O seu nome" required>
-                </div>
-                <div class="col-span-2">
-                    <label class="block text-[10px] font-black text-gray-700 mb-0.5 uppercase italic">2. Data</label>
-                    <input type="date" name="data" id="campoData" class="w-full p-2 border border-gray-300 rounded focus:border-green-600 outline-none text-sm font-bold text-black" required>
-                </div>
-            </div>
-
-            <!-- Tabela de Produtos -->
-            <div class="border border-black rounded overflow-hidden bg-white">
-                <table class="w-full border-collapse fonte-cupom">
-                    <thead>
-                        <tr class="cabecalho-tabela">
-                            <th class="border-b border-black p-2 text-[10px] font-black uppercase text-left w-2/3">PRODUTO</th>
-                            <th class="border-b border-black p-2 text-[10px] font-black uppercase text-center w-1/3">QTD.</th>
-                        </tr>
-                    </thead>
-                    <tbody id="listaProdutos" class="divide-y divide-gray-100"></tbody>
-                </table>
-            </div>
-
-            <div class="sticky bottom-2 pt-2">
-                <button type="submit" id="btnEnviar" class="w-full bg-green-600 hover:bg-green-700 text-white py-4 rounded-xl font-black text-lg btn-shadow transition-all transform uppercase flex items-center justify-center gap-2">
-                    <span>ENVIAR E SALVAR PDF</span>
-                    <span class="text-xl">➔</span>
-                </button>
-            </div>
-        </form>
-    </div>
-
-    <!-- ÁREA DO PDF (Tamanho de Cupom) -->
-    <div id="wrapper-pdf">
-        <div class="mb-4 text-green-700 font-black text-sm animate-pulse">A PREPARAR CUPOM...</div>
-        <div id="conteudoPdfExport" class="fonte-cupom">
-            <div style="text-align: center; border-bottom: 2px dashed black; padding-bottom: 10px; margin-bottom: 10px;">
-                <h2 style="margin: 0; font-size: 16px; color: black; font-weight: bold;">COOPERATIVA CLAF</h2>
-                <p style="margin: 0; font-size: 9px; text-transform: uppercase; color: black;">Recibo de Pedido</p>
-            </div>
-            
-            <p style="margin: 3px 0; color: black; font-size: 11px;"><strong>PRODUTOR:</strong> <span id="pdfNome"></span></p>
-            <p style="margin: 3px 0; color: black; font-size: 11px;"><strong>DATA:</strong> <span id="pdfData"></span></p>
-            
-            <div style="border-bottom: 1px solid black; margin: 5px 0;"></div>
-            
-            <table style="width: 100%; border-collapse: collapse; color: black;">
-                <thead>
-                    <tr style="border-bottom: 1px solid black;">
-                        <th style="text-align: left; padding: 2px 0; font-size: 10px;">PRODUTO</th>
-                        <th style="text-align: right; padding: 2px 0; font-size: 10px;">QTD</th>
-                    </tr>
-                </thead>
-                <tbody id="pdfItens"></tbody>
-            </table>
-            
-            <div style="margin-top: 10px; border-top: 2px dashed black; padding-top: 10px; text-align: center;">
-                <p style="font-size: 8px; margin: 0; color: black;">Emitido em: <span id="pdfTimestamp"></span></p>
-                <p style="font-size: 11px; font-weight: bold; margin-top: 3px; color: black;">Cooperativa CLAF agradece!</p>
-                <div style="height: 25px;"></div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Modal de Sucesso -->
-    <div id="modalSucesso" class="fixed inset-0 bg-black/80 hidden items-center justify-center p-4 z-50">
-        <div class="bg-white p-6 rounded-2xl text-center max-w-[280px] w-full border-4 border-green-500 shadow-2xl animate-pop">
-            <div class="w-14 h-14 bg-green-100 text-green-600 rounded-full flex items-center justify-center mx-auto mb-3 text-3xl font-bold">✓</div>
-            <h2 class="text-xl font-black text-green-700 uppercase mb-1">Pedido Enviado!</h2>
-            <p class="text-gray-600 font-bold mb-4 text-[10px] italic text-center">O cupom foi gerado e os dados enviados.</p>
-            <button onclick="novoPedido()" class="w-full bg-green-600 text-white py-3 rounded-lg font-black uppercase text-xs">NOVO PEDIDO</button>
-        </div>
-    </div>
-
-    <script>
-        const produtos = ["Abacate", "Abacaxi", "Banana caturra", "Banana maçã ou prata", "Laranja baiana lima", "Laranja Comum", "Maçã", "Mamão", "Manga", "Maracujá", "Melancia", "Melão", "Pera", "Pêssego", "Tangerina poncã", "Almeirão", "Acelga", "Agrião", "Alface", "Couve Manteiga", "Escarola", "Espinafre", "Quiabo", "Repolho", "Rúcula", "Abobrinha verde", "Beterraba", "Brócolis", "Cenoura", "Chuchu", "Couve flor", "Milho verde", "Pepino", "Tomate", "Vagem", "Leite Pasteurizado", "Pão Caseiro", "Alho poró", "Cebola", "Cebolinha Verde", "Limão", "Pimentão", "Rabanete", "Salsinha", "Batata doce", "Batata inglesa", "Iogurte"];
-
-        document.getElementById('campoData').value = new Date().toISOString().split('T')[0];
-        const tbody = document.getElementById('listaProdutos');
-
-        produtos.forEach((prod, index) => {
-            const tr = document.createElement('tr');
-            tr.className = "item-row border-b border-gray-100";
-            // Normalizar o ID para ser consistente com o Script
-            const idPlanilha = prod.normalize('NFD').replace(/[\u0300-\u036f]/g, "").replace(/\s+/g, '_');
-            tr.innerHTML = `
-                <td class="p-2">
-                    <label class="flex items-center gap-2 cursor-pointer select-none">
-                        <input type="checkbox" id="check_${index}" class="w-4 h-4 rounded border-gray-300 text-green-600">
-                        <span class="text-[11px] font-bold text-gray-800 uppercase tracking-tighter">${prod}</span>
-                    </label>
-                </td>
-                <td class="p-1">
-                    <input type="number" name="${idPlanilha}" min="0" step="any" inputmode="decimal"
-                           class="w-full p-1.5 border border-gray-200 rounded text-center text-sm font-black bg-gray-50 outline-none text-black"
-                           placeholder="0"
-                           oninput="document.getElementById('check_${index}').checked = (this.value > 0)">
-                </td>
-            `;
-            tbody.appendChild(tr);
-        });
-
-        async function gerarPDF(nome, data, itens) {
-            const wrapper = document.getElementById('wrapper-pdf');
-            const element = document.getElementById('conteudoPdfExport');
-            const pdfItensTbody = document.getElementById('pdfItens');
-            
-            document.getElementById('pdfNome').innerText = nome.toUpperCase();
-            document.getElementById('pdfData').innerText = data;
-            document.getElementById('pdfTimestamp').innerText = new Date().toLocaleString('pt-PT');
-            pdfItensTbody.innerHTML = "";
-            
-            itens.forEach(i => {
-                const tr = document.createElement('tr');
-                tr.style.borderBottom = "1px solid #eee";
-                tr.innerHTML = `<td style="padding: 4px 0; text-align: left; font-weight: bold; color: black; font-size: 10px;">${i.nome}</td><td style="padding: 4px 0; text-align: right; font-weight: bold; color: black; font-size: 10px;">${i.qtd}</td>`;
-                pdfItensTbody.appendChild(tr);
-            });
-
-            wrapper.style.display = "flex";
-            window.scrollTo(0,0);
-
-            await new Promise(resolve => setTimeout(resolve, 800));
-
-            // Altura dinâmica baseada no número de itens
-            const alturaEstimada = 100 + (itens.length * 9);
-
-            const opt = {
-                margin: 0,
-                filename: `Pedido_CLAF_${nome.replace(/\s+/g, '_')}.pdf`,
-                image: { type: 'jpeg', quality: 0.98 },
-                html2canvas: { 
-                    scale: 2, 
-                    backgroundColor: "#ffffff",
-                    useCORS: true
-                },
-                jsPDF: { 
-                    unit: 'mm', 
-                    format: [80, Math.max(160, alturaEstimada)], 
-                    orientation: 'portrait' 
-                }
-            };
-
-            try {
-                await html2pdf().set(opt).from(element).save();
-            } finally {
-                wrapper.style.display = "none";
-            }
-        }
-
-        document.getElementById('meuFormulario').addEventListener('submit', async function(e) {
-            e.preventDefault();
-            const btn = document.getElementById('btnEnviar');
-            
-            // Construção robusta dos parâmetros
-            const params = new URLSearchParams();
-            const itensParaPDF = [];
-            const inputNome = document.getElementById('inputNome').value;
-            const inputData = document.getElementById('campoData').value;
-
-            params.append('nome', inputNome);
-            params.append('data', inputData);
-            params.append('timestamp', new Date().toLocaleString('pt-BR'));
-
-            // Capturar TODOS os inputs de quantidade do formulário de forma segura
-            const inputsQtd = this.querySelectorAll('input[type="number"]');
-            inputsQtd.forEach(input => {
-                const valor = input.value;
-                const nomeDoCampo = input.name;
-                
-                // Enviar sempre o valor (mesmo que seja string vazia ou 0) para manter a integridade da linha
-                params.append(nomeDoCampo, valor || "");
-
-                // Para o PDF, apenas o que for maior que zero
-                if (valor && parseFloat(valor) > 0) {
-                    itensParaPDF.push({ 
-                        nome: nomeDoCampo.replace(/_/g, ' '), 
-                        qtd: valor 
-                    });
-                }
-            });
-
-            if (itensParaPDF.length === 0) {
-                alert("Por favor, introduza a quantidade em pelo menos um produto.");
-                return;
-            }
-
-            btn.disabled = true;
-            btn.innerHTML = `<span class="animate-pulse">A ENVIAR...</span>`;
-
-            try {
-                const scriptURL = "https://script.google.com/macros/s/AKfycbxz5TNZUY9gcXxRx3tCAAzdXXwKx_x1OEcvXiCYJVOVyXfmxHa-41nFSdsFBlk_j-CS/exec";
-                
-                // Envio POST
-                fetch(scriptURL, {
-                    method: 'POST',
-                    mode: 'no-cors',
-                    cache: 'no-cache',
-                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-                    body: params.toString()
-                });
-
-                // Gerar PDF em tamanho de cupom
-                await gerarPDF(inputNome, inputData, itensParaPDF);
-
-                document.getElementById('modalSucesso').classList.remove('hidden');
-                document.getElementById('modalSucesso').classList.add('flex');
-            } catch (err) {
-                console.error(err);
-                alert("Erro ao enviar. Verifique a ligação.");
-            } finally {
-                btn.disabled = false;
-                btn.innerHTML = `<span>ENVIAR E SALVAR PDF</span><span class="text-xl">➔</span>`;
-            }
-        });
-
-        function novoPedido() {
-            location.reload();
-        }
-    </script>
-</body>
-</html>
+  } catch (err) {
+    if (lock.hasLock()) lock.releaseLock();
+    return ContentService.createTextOutput(JSON.stringify({
+      "status": "Erro", 
+      "message": err.message
+    })).setMimeType(ContentService.MimeType.JSON);
+  }
+}
