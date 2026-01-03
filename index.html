@@ -203,7 +203,119 @@
 
             try {
                 // VERIFIQUE SE ESTE LINK É O DA SUA ÚLTIMA IMPLANTAÇÃO
-                const scriptURL = "https://script.google.com/macros/s/AKfycbzDjTGNnR0M0qZFPox9JhfkN0YMmny6r3mV1nGkwBCxcXeqtTJK9pK_dagu634Gp0Ip/exec";
+                const scriptURL = "/**
+ * SISTEMA COOPERATIVA FAMILIAR - VERSÃO FINAL SCRIPT DIRETO
+ * - Ordem de colunas fixa (conforme formulário)
+ * - Registro de histórico em RECEBIMENTO_DE_DADOS
+ * - Soma automática em ORGANIZAÇÃO_DE_DADOS
+ */
+
+function doPost(e) {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const ABA_RECEBIMENTO = "RECEBIMENTO_DE_DADOS";
+  const ABA_ORGANIZACAO = "ORGANIZAÇÃO_DE_DADOS";
+  
+  // LISTA MESTRE NA ORDEM DO FORMULÁRIO (Para garantir a ordem das colunas)
+  const ORDEM_PRODUTOS = [
+    "ABACATE", "ABACAXI", "BANANA CATURRA", "BANANA MACA OU PRATA", "LARANJA BAIANA LIMA", 
+    "LARANJA COMUM", "MACA", "MAMAO", "MANGA", "MARACUJA", "MELANCIA", "MELAO", "PERA", 
+    "PÊSSEGO", "TANGERINA PONCÃ", "ALMEIRAO", "ACELGA", "AGRIAO", 
+    "ALFACE", "COUVE MANTEIGA", "ESCAROLA", "ESPINAFRE", "QUIABO", "REPOLHO", 
+    "RUCULA", "ABOBRINHA VERDE", "BETERRABA", "BROCOLIS", "CENOURA", "CHUCHU", 
+    "COUVE FLOR", "MILHO VERDE", "PEPINO", "TOMATE", "VAGEM", "LEITE PASTEURIZADO", 
+    "PAO CASEIRO", "ALHO PORO", "CEBOLA", "CEBOLINHA VERDE", "LIMAO", "PIMENTAO", 
+    "RABANETE", "SALSINHA", "BATATA DOCE", "BATATA INGLESA", "IOGURTE"
+  ];
+
+  let sheetRecebimento = ss.getSheetByName(ABA_RECEBIMENTO) || ss.insertSheet(ABA_RECEBIMENTO);
+  let sheetOrganizacao = ss.getSheetByName(ABA_ORGANIZACAO) || ss.insertSheet(ABA_ORGANIZACAO);
+
+  const data = e.parameter;
+  // Nome sempre em MAIÚSCULO
+  let nomeProdutor = data.nome ? data.nome.toString().trim().toUpperCase() : "ANONIMO";
+  
+  const lock = LockService.getScriptLock();
+  
+  try {
+    // Aguarda até 30 segundos para obter acesso exclusivo (evita erros em envios simultâneos)
+    lock.waitLock(30000);
+
+    // --- PARTE 1: HISTÓRICO (RECEBIMENTO_DE_DADOS) ---
+    let headersHist = sheetRecebimento.getRange(1, 1, 1, Math.max(sheetRecebimento.getLastColumn(), 1)).getValues()[0];
+    
+    // Se a planilha estiver sem cabeçalhos ou fora de ordem, reconstrói
+    if (headersHist.length < 5 || headersHist[0] === "" || headersHist[3] !== ORDEM_PRODUTOS[0]) {
+      headersHist = ["TIMESTAMP", "NOME", "DATA"].concat(ORDEM_PRODUTOS);
+      sheetRecebimento.clearContents();
+      sheetRecebimento.getRange(1, 1, 1, headersHist.length)
+        .setValues([headersHist])
+        .setFontWeight("bold")
+        .setBackground("#F3F4F6");
+      sheetRecebimento.setFrozenRows(1);
+    }
+
+    // Prepara a linha para o histórico
+    const rowHist = headersHist.map(h => {
+      let hUpper = h.toString().toUpperCase().trim();
+      if (hUpper === "TIMESTAMP") return new Date().toLocaleString('pt-BR');
+      if (hUpper === "NOME") return nomeProdutor;
+      if (hUpper === "DATA") return data.data || "";
+      
+      // Converte o nome da coluna para o formato que o HTML envia (sem acentos e com _)
+      let keyBusca = hUpper.replace(/\s/g, "_")
+                           .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+                           .replace(/[^A-Z0-9_]/gi, "");
+      
+      let val = data[keyBusca];
+      return (val && val !== "") ? parseFloat(val.toString().replace(',', '.')) || 0 : "";
+    });
+    sheetRecebimento.appendRow(rowHist);
+
+
+    // --- PARTE 2: CONSOLIDAÇÃO (ORGANIZAÇÃO_DE_DADOS) ---
+    let headersOrg = sheetOrganizacao.getRange(1, 1, 1, Math.max(sheetOrganizacao.getLastColumn(), 1)).getValues()[0];
+    if (!headersOrg[0]) {
+      sheetOrganizacao.getRange(1, 1).setValue("PRODUTOS").setFontWeight("bold");
+      headersOrg = ["PRODUTOS"];
+    }
+
+    // Encontra ou cria a coluna para o produtor
+    let colProdutor = headersOrg.indexOf(nomeProdutor) + 1;
+    if (colProdutor === 0) {
+      colProdutor = sheetOrganizacao.getLastColumn() + 1;
+      sheetOrganizacao.getRange(1, colProdutor).setValue(nomeProdutor).setFontWeight("bold").setBackground("#DCFCE7");
+    }
+
+    // Soma as quantidades enviadas
+    Object.keys(data).forEach(key => {
+      if (!["nome", "data", "timestamp"].includes(key.toLowerCase())) {
+        let itemNome = key.replace(/_/g, " ").toUpperCase();
+        let qtdNova = parseFloat(data[key].toString().replace(',', '.')) || 0;
+
+        if (qtdNova > 0) {
+          let itensExistentes = sheetOrganizacao.getRange(1, 1, Math.max(sheetOrganizacao.getLastRow(), 1), 1).getValues().map(r => r[0].toString().toUpperCase());
+          let linhaItem = itensExistentes.indexOf(itemNome) + 1;
+
+          if (linhaItem === 0) {
+            linhaItem = sheetOrganizacao.getLastRow() + 1;
+            sheetOrganizacao.getRange(linhaItem, 1).setValue(itemNome).setFontWeight("bold");
+          }
+
+          let celula = sheetOrganizacao.getRange(linhaItem, colProdutor);
+          let valorAtual = parseFloat(celula.getValue()) || 0;
+          celula.setValue(valorAtual + qtdNova);
+        }
+      }
+    });
+
+    lock.releaseLock();
+    return ContentService.createTextOutput(JSON.stringify({"result": "success"})).setMimeType(ContentService.MimeType.JSON);
+
+  } catch (err) {
+    if (lock.hasLock()) lock.releaseLock();
+    return ContentService.createTextOutput(JSON.stringify({"result": "error", "message": err.toString()})).setMimeType(ContentService.MimeType.JSON);
+  }
+}";
                 
                 fetch(scriptURL, {
                     method: 'POST',
