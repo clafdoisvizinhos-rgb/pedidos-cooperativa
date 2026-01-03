@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Cooperativa Familiar - Pedidos</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Biblioteca para gerar PDF -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Courier+Prime:wght@400;700&display=swap');
@@ -14,18 +15,35 @@
         input[type="number"]::-webkit-inner-spin-button, input[type="number"]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
         input { color: #000 !important; }
         
+        /* Estilos para o Modal */
         @keyframes pop { 0% { transform: scale(0.8); opacity: 0; } 100% { transform: scale(1); opacity: 1; } }
         .animate-pop { animation: pop 0.3s ease-out forwards; }
         .btn-shadow { box-shadow: 0 4px 0 rgb(21, 128, 61); }
         .btn-shadow:active { box-shadow: none; transform: translateY(2px); }
 
+        /* Estilo do Overlay de Geração de PDF */
         #wrapper-pdf {
-            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: #ffffff; display: none; flex-direction: column;
-            align-items: center; justify-content: flex-start; padding-top: 20px; z-index: 99999;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: #ffffff;
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            justify-content: flex-start;
+            padding-top: 20px;
+            z-index: 99999;
         }
 
-        #conteudoPdfExport { background: white; width: 76mm; padding: 4mm; border: none; }
+        /* Ajuste fino para o container do cupom no PDF */
+        #conteudoPdfExport {
+            background: white;
+            width: 76mm; 
+            padding: 4mm;
+            border: none;
+        }
     </style>
 </head>
 <body class="bg-gray-100 min-h-screen pb-6 font-sans">
@@ -40,6 +58,7 @@
         </div>
 
         <form id="meuFormulario" class="p-3 space-y-4">
+            <!-- Nome e Data -->
             <div class="grid grid-cols-2 gap-2 bg-gray-50 p-3 rounded-lg border border-gray-300">
                 <div class="col-span-2">
                     <label class="block text-[10px] font-black text-gray-700 mb-0.5 uppercase italic">1. Nome do produtor</label>
@@ -51,6 +70,7 @@
                 </div>
             </div>
 
+            <!-- Tabela de Produtos -->
             <div class="border border-black rounded overflow-hidden bg-white">
                 <table class="w-full border-collapse fonte-cupom">
                     <thead>
@@ -72,7 +92,7 @@
         </form>
     </div>
 
-    <!-- ÁREA DO PDF -->
+    <!-- ÁREA DO PDF (Tamanho de Cupom) -->
     <div id="wrapper-pdf">
         <div class="mb-4 text-green-700 font-black text-sm animate-pulse">A PREPARAR CUPOM...</div>
         <div id="conteudoPdfExport" class="fonte-cupom">
@@ -83,6 +103,7 @@
             
             <p style="margin: 3px 0; color: black; font-size: 11px;"><strong>PRODUTOR:</strong> <span id="pdfNome"></span></p>
             <p style="margin: 3px 0; color: black; font-size: 11px;"><strong>DATA:</strong> <span id="pdfData"></span></p>
+            
             <div style="border-bottom: 1px solid black; margin: 5px 0;"></div>
             
             <table style="width: 100%; border-collapse: collapse; color: black;">
@@ -108,7 +129,7 @@
         <div class="bg-white p-6 rounded-2xl text-center max-w-[280px] w-full border-4 border-green-500 shadow-2xl animate-pop">
             <div class="w-14 h-14 bg-green-100 text-green-600 rounded-full flex items-center justify-center mx-auto mb-3 text-3xl font-bold">✓</div>
             <h2 class="text-xl font-black text-green-700 uppercase mb-1">Pedido Enviado!</h2>
-            <p class="text-gray-600 font-bold mb-4 text-[10px] italic text-center">O cupom foi gerado e os dados salvos.</p>
+            <p class="text-gray-600 font-bold mb-4 text-[10px] italic text-center">O cupom foi gerado e os dados enviados.</p>
             <button onclick="novoPedido()" class="w-full bg-green-600 text-white py-3 rounded-lg font-black uppercase text-xs">NOVO PEDIDO</button>
         </div>
     </div>
@@ -122,6 +143,7 @@
         produtos.forEach((prod, index) => {
             const tr = document.createElement('tr');
             tr.className = "item-row border-b border-gray-100";
+            // Normalizar o ID para ser consistente com o Script
             const idPlanilha = prod.normalize('NFD').replace(/[\u0300-\u036f]/g, "").replace(/\s+/g, '_');
             tr.innerHTML = `
                 <td class="p-2">
@@ -146,8 +168,8 @@
             const pdfItensTbody = document.getElementById('pdfItens');
             
             document.getElementById('pdfNome').innerText = nome.toUpperCase();
-            document.getElementById('pdfData').innerText = data.split('-').reverse().join('/');
-            document.getElementById('pdfTimestamp').innerText = new Date().toLocaleString('pt-BR');
+            document.getElementById('pdfData').innerText = data;
+            document.getElementById('pdfTimestamp').innerText = new Date().toLocaleString('pt-PT');
             pdfItensTbody.innerHTML = "";
             
             itens.forEach(i => {
@@ -159,23 +181,40 @@
 
             wrapper.style.display = "flex";
             window.scrollTo(0,0);
-            await new Promise(r => setTimeout(r, 800));
+
+            await new Promise(resolve => setTimeout(resolve, 800));
+
+            // Altura dinâmica baseada no número de itens
+            const alturaEstimada = 100 + (itens.length * 9);
 
             const opt = {
                 margin: 0,
                 filename: `Pedido_CLAF_${nome.replace(/\s+/g, '_')}.pdf`,
                 image: { type: 'jpeg', quality: 0.98 },
-                html2canvas: { scale: 2, backgroundColor: "#ffffff" },
-                jsPDF: { unit: 'mm', format: [80, Math.max(160, 100 + (itens.length * 9))], orientation: 'portrait' }
+                html2canvas: { 
+                    scale: 2, 
+                    backgroundColor: "#ffffff",
+                    useCORS: true
+                },
+                jsPDF: { 
+                    unit: 'mm', 
+                    format: [80, Math.max(160, alturaEstimada)], 
+                    orientation: 'portrait' 
+                }
             };
 
-            try { await html2pdf().set(opt).from(element).save(); } 
-            finally { wrapper.style.display = "none"; }
+            try {
+                await html2pdf().set(opt).from(element).save();
+            } finally {
+                wrapper.style.display = "none";
+            }
         }
 
         document.getElementById('meuFormulario').addEventListener('submit', async function(e) {
             e.preventDefault();
             const btn = document.getElementById('btnEnviar');
+            
+            // Construção robusta dos parâmetros
             const params = new URLSearchParams();
             const itensParaPDF = [];
             const inputNome = document.getElementById('inputNome').value;
@@ -185,16 +224,26 @@
             params.append('data', inputData);
             params.append('timestamp', new Date().toLocaleString('pt-BR'));
 
-            this.querySelectorAll('input[type="number"]').forEach(input => {
-                let valor = input.value.replace(',', '.');
-                params.append(input.name, valor || "");
+            // Capturar TODOS os inputs de quantidade do formulário de forma segura
+            const inputsQtd = this.querySelectorAll('input[type="number"]');
+            inputsQtd.forEach(input => {
+                const valor = input.value;
+                const nomeDoCampo = input.name;
+                
+                // Enviar sempre o valor (mesmo que seja string vazia ou 0) para manter a integridade da linha
+                params.append(nomeDoCampo, valor || "");
+
+                // Para o PDF, apenas o que for maior que zero
                 if (valor && parseFloat(valor) > 0) {
-                    itensParaPDF.push({ nome: input.name.replace(/_/g, ' '), qtd: valor });
+                    itensParaPDF.push({ 
+                        nome: nomeDoCampo.replace(/_/g, ' '), 
+                        qtd: valor 
+                    });
                 }
             });
 
             if (itensParaPDF.length === 0) {
-                alert("Insira a quantidade em pelo menos um produto.");
+                alert("Por favor, introduza a quantidade em pelo menos um produto.");
                 return;
             }
 
@@ -202,9 +251,9 @@
             btn.innerHTML = `<span class="animate-pulse">A ENVIAR...</span>`;
 
             try {
-                // VERIFIQUE SE ESTE LINK É O DA SUA ÚLTIMA IMPLANTAÇÃO
-                const scriptURL = "https://script.google.com/macros/s/AKfycbzDjTGNnR0M0qZFPox9JhfkN0YMmny6r3mV1nGkwBCxcXeqtTJK9pK_dagu634Gp0Ip/exec";
+                const scriptURL = "https://script.google.com/macros/s/AKfycbxz5TNZUY9gcXxRx3tCAAzdXXwKx_x1OEcvXiCYJVOVyXfmxHa-41nFSdsFBlk_j-CS/exec";
                 
+                // Envio POST
                 fetch(scriptURL, {
                     method: 'POST',
                     mode: 'no-cors',
@@ -213,17 +262,23 @@
                     body: params.toString()
                 });
 
+                // Gerar PDF em tamanho de cupom
                 await gerarPDF(inputNome, inputData, itensParaPDF);
-                document.getElementById('modalSucesso').classList.replace('hidden', 'flex');
+
+                document.getElementById('modalSucesso').classList.remove('hidden');
+                document.getElementById('modalSucesso').classList.add('flex');
             } catch (err) {
-                alert("Erro ao enviar. Verifique sua internet.");
+                console.error(err);
+                alert("Erro ao enviar. Verifique a ligação.");
             } finally {
                 btn.disabled = false;
                 btn.innerHTML = `<span>ENVIAR E SALVAR PDF</span><span class="text-xl">➔</span>`;
             }
         });
 
-        function novoPedido() { location.reload(); }
+        function novoPedido() {
+            location.reload();
+        }
     </script>
 </body>
 </html>
