@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Cooperativa CLAF - Entrega</title>
+<title>CLAF - Entrega</title>
 
 <script src="https://cdn.tailwindcss.com"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
@@ -18,68 +18,74 @@
 
 <div class="max-w-[380px] mx-auto bg-white shadow min-h-screen">
 
-  <!-- CABEÇALHO -->
-  <div class="bg-green-700 text-white text-center p-4">
-    <h1 class="text-sm font-bold uppercase">Cooperativa</h1>
-    <h2 class="text-4xl font-black text-yellow-400">CLAF</h2>
-    <p class="text-[10px] uppercase">Sistema de Entrega</p>
-  </div>
-
-  <!-- FORMULÁRIO -->
-  <form id="formEntrega" class="p-3 space-y-3 fonte">
-
-    <label class="block text-xs font-bold">PRODUTOR</label>
-    <input name="produtor" required
-           class="w-full border px-2 py-1 text-sm font-bold">
-
-    <label class="block text-xs font-bold">DATA DA ENTREGA</label>
-    <input type="date" name="data" id="dataEntrega" required
-           class="w-full border px-2 py-1 text-sm font-bold">
-
-    <table class="w-full border text-sm">
-      <thead class="bg-yellow-300">
-        <tr>
-          <th class="text-left px-2 py-1">PRODUTO</th>
-          <th class="w-20 text-center">QTD</th>
-        </tr>
-      </thead>
-      <tbody id="listaProdutos"></tbody>
-    </table>
-
-    <button type="submit"
-            class="w-full bg-green-600 text-white py-3 font-black uppercase text-sm">
-      ENVIAR E SALVAR CUPOM
-    </button>
-
-  </form>
+<!-- CABEÇALHO -->
+<div class="bg-green-700 text-white text-center p-4">
+  <h1 class="text-sm font-bold uppercase">Cooperativa</h1>
+  <h2 class="text-4xl font-black text-yellow-400">CLAF</h2>
+  <p class="text-[10px] uppercase">Sistema de Entrega</p>
 </div>
 
-<!-- CUPOM (FORA DA TELA, VISÍVEL AO PDF) -->
-<div id="cupom" class="fonte"
-     style="position:fixed; left:-9999px; top:0; width:80mm; padding:4mm; background:white">
+<!-- FORMULÁRIO -->
+<form id="formEntrega" class="p-3 space-y-3 fonte">
 
-  <div class="text-center border-b border-dashed mb-2">
-    <div class="font-bold">COOPERATIVA CLAF</div>
-    <div class="text-[9px]">RECIBO DE ENTREGA</div>
-  </div>
+<label class="block text-xs font-bold">PRODUTOR</label>
+<input name="produtor" required class="w-full border px-2 py-1 text-sm font-bold">
 
-  <div class="text-[10px]"><b>PRODUTOR:</b> <span id="cProd"></span></div>
-  <div class="text-[10px]"><b>DATA ENTREGA:</b> <span id="cData"></span></div>
-  <div class="text-[10px]"><b>REGISTRO:</b> <span id="cHora"></span></div>
+<label class="block text-xs font-bold">DATA DA ENTREGA</label>
+<input type="date" name="data" id="dataEntrega" required
+       class="w-full border px-2 py-1 text-sm font-bold">
 
-  <table class="w-full text-[9px] mt-2">
-    <thead>
-      <tr>
-        <th align="left">PRODUTO</th>
-        <th align="right">QTD</th>
-      </tr>
-    </thead>
-    <tbody id="cItens"></tbody>
-  </table>
+<table class="w-full border text-sm">
+<thead class="bg-yellow-300">
+<tr>
+  <th class="text-left px-2 py-1">PRODUTO</th>
+  <th class="w-20 text-center">QTD</th>
+</tr>
+</thead>
+<tbody id="listaProdutos"></tbody>
+</table>
 
-  <div class="border-t border-dashed mt-2 pt-1 text-center text-[8px]">
-    CLAF • Sistema de Entrega
-  </div>
+<button type="submit"
+        class="w-full bg-green-600 text-white py-3 font-black uppercase text-sm">
+SALVAR E ENVIAR
+</button>
+
+</form>
+</div>
+
+<!-- ESBOÇO / CUPOM VISÍVEL -->
+<div id="cupomPreview" class="fonte max-w-[320px] mx-auto bg-white mt-4 p-3 border hidden">
+
+<div class="text-center border-b border-dashed mb-2">
+  <div class="font-bold">COOPERATIVA CLAF</div>
+  <div class="text-[9px]">RECIBO DE ENTREGA</div>
+</div>
+
+<div class="text-[10px]"><b>PRODUTOR:</b> <span id="pProd"></span></div>
+<div class="text-[10px]"><b>DATA ENTREGA:</b> <span id="pData"></span></div>
+<div class="text-[10px]"><b>REGISTRO:</b> <span id="pHora"></span></div>
+
+<table class="w-full text-[9px] mt-2">
+<thead>
+<tr>
+  <th align="left">PRODUTO</th>
+  <th align="right">QTD</th>
+</tr>
+</thead>
+<tbody id="pItens"></tbody>
+</table>
+
+<div class="border-t border-dashed mt-2 pt-1 text-center text-[8px]">
+CLAF • Sistema de Entrega
+</div>
+
+<div class="mt-3 text-center">
+  <button id="btnNovo"
+          class="bg-gray-700 text-white px-4 py-2 text-xs uppercase hidden">
+    Novo pedido
+  </button>
+</div>
+
 </div>
 
 <script>
@@ -97,6 +103,7 @@ const produtos = [
 "PIMENTÃO","RABANETE","SALSINHA","BATATA DOCE","BATATA INGLESA"
 ];
 
+/* MONTA LISTA */
 const tbody = document.getElementById("listaProdutos");
 produtos.forEach(p=>{
   const name = p.normalize("NFD").replace(/[^A-Z0-9]+/g,"_");
@@ -116,54 +123,59 @@ hoje.setMinutes(hoje.getMinutes() - hoje.getTimezoneOffset());
 document.getElementById("dataEntrega").value = hoje.toISOString().split("T")[0];
 
 /* SUBMIT */
-document.getElementById("formEntrega").addEventListener("submit", async e => {
-  e.preventDefault();
+document.getElementById("formEntrega").addEventListener("submit", async e=>{
+e.preventDefault();
 
-  const btn = e.target.querySelector("button");
-  btn.disabled = true;
-  btn.innerText = "ENVIANDO...";
+const fd = new FormData(e.target);
+const itens=[];
 
-  const fd = new FormData(e.target);
-  const itens = [];
-
-  for (const [k,v] of fd.entries()) {
-    if (!["produtor","data"].includes(k) && v > 0) {
-      itens.push({ nome:k.replace(/_/g," "), qtd:v });
-    }
+for (const [k,v] of fd.entries()) {
+  if(!["produtor","data"].includes(k) && v>0) {
+    itens.push({nome:k.replace(/_/g," "), qtd:v});
   }
+}
 
-  if (!itens.length) {
-    alert("Informe ao menos um produto.");
-    btn.disabled = false;
-    btn.innerText = "ENVIAR E SALVAR CUPOM";
-    return;
-  }
+if(!itens.length){alert("Informe ao menos um produto.");return;}
 
-  document.getElementById("cProd").innerText = fd.get("produtor").toUpperCase();
-  document.getElementById("cData").innerText = fd.get("data");
-  document.getElementById("cHora").innerText = new Date().toLocaleString("pt-BR");
+/* PREENCHE ESBOÇO */
+document.getElementById("pProd").innerText = fd.get("produtor").toUpperCase();
+document.getElementById("pData").innerText = fd.get("data");
+const agora = new Date();
+document.getElementById("pHora").innerText = agora.toLocaleString("pt-BR");
 
-  const cItens = document.getElementById("cItens");
-  cItens.innerHTML = "";
-  itens.forEach(i=>{
-    cItens.innerHTML += `<tr><td>${i.nome}</td><td align="right">${i.qtd}</td></tr>`;
-  });
+const pItens=document.getElementById("pItens");
+pItens.innerHTML="";
+itens.forEach(i=>{
+  pItens.innerHTML += `<tr><td>${i.nome}</td><td align="right">${i.qtd}</td></tr>`;
+});
 
-  await fetch("https://script.google.com/macros/s/AKfycbxtbMkL0FlRgxscgqJeItcC5n3t9Hx_5soim2WgILnQJbIE1z-2Kgum6sauDNNNwWhX/exec", {
-    method:"POST",
-    mode:"no-cors",
-    body:new URLSearchParams(fd)
-  });
+document.getElementById("cupomPreview").classList.remove("hidden");
 
-  await new Promise(r=>setTimeout(r,300));
+/* ENVIA PARA PLANILHA */
+await fetch("COLE_AQUI_A_URL_DO_WEB_APP", {
+  method:"POST",
+  mode:"no-cors",
+  body:new URLSearchParams(fd)
+});
 
-  html2pdf({
-    filename:`CLAF_${fd.get("data")}_${fd.get("produtor").replace(/\s+/g,"_")}.pdf`,
-    jsPDF:{unit:"mm",format:[80,200],orientation:"portrait"}
-  }).from(document.getElementById("cupom")).save();
+/* GERA PDF EM NOVA ABA */
+const opt = {
+  margin: 0,
+  filename: `CLAF_${fd.get("data")}_${fd.get("produtor").replace(/\s+/g,"_")}_${agora.getHours()}-${agora.getMinutes()}.pdf`,
+  html2canvas: { scale:2 },
+  jsPDF: { unit:"mm", format:[80,200], orientation:"portrait" }
+};
 
-  btn.disabled = false;
-  btn.innerText = "ENVIAR E SALVAR CUPOM";
+html2pdf().set(opt).from(document.getElementById("cupomPreview")).toPdf().get('pdf')
+.then(pdf=>{
+  const blob = pdf.output('bloburl');
+  window.open(blob,'_blank');
+});
+
+/* BOTÃO NOVO PEDIDO */
+const btnNovo=document.getElementById("btnNovo");
+btnNovo.classList.remove("hidden");
+btnNovo.onclick=()=>location.reload();
 });
 </script>
 
