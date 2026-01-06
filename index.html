@@ -1,167 +1,133 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Cooperativa CLAF - Pedido</title>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Cooperativa CLAF - Entrega</title>
 
-  <script src="https://cdn.tailwindcss.com"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
 
-  <style>
-    @import url('https://fonts.googleapis.com/css2?family=Courier+Prime:wght@400;700&display=swap');
-    .fonte-cupom { font-family: 'Courier Prime', monospace; }
-  </style>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Courier+Prime:wght@400;700&display=swap');
+.fonte { font-family:'Courier Prime', monospace; }
+</style>
 </head>
 
-<body class="bg-gray-100 min-h-screen font-sans">
+<body class="bg-gray-100">
 
-<div class="max-w-[380px] mx-auto bg-white min-h-screen shadow">
+<div class="max-w-[380px] mx-auto bg-white shadow min-h-screen">
 
-  <!-- Cabeçalho -->
-  <div class="bg-green-700 text-white text-center p-4">
-    <h1 class="text-base font-bold uppercase">Cooperativa</h1>
-    <h2 class="text-4xl font-black uppercase text-yellow-400">CLAF</h2>
-    <p class="text-[10px] uppercase mt-1">Sistema de Entrega</p>
-  </div>
-
-  <!-- Formulário -->
-  <form id="meuFormulario" class="p-3 space-y-3">
-
-    <div>
-      <label class="text-xs font-bold uppercase">Produtor</label>
-      <input type="text" name="produtor" required
-             class="w-full border px-2 py-1.5 font-bold text-sm">
-    </div>
-
-    <div>
-      <label class="text-xs font-bold uppercase">Data</label>
-      <input type="date" name="data" id="campoData" required
-             class="w-full border px-2 py-1.5 font-bold text-sm">
-    </div>
-
-    <table class="w-full fonte-cupom border">
-      <thead>
-        <tr class="bg-yellow-300">
-          <th class="text-left px-2 py-1 text-xs">PRODUTO</th>
-          <th class="text-center px-2 py-1 text-xs w-20">QTD</th>
-        </tr>
-      </thead>
-      <tbody id="listaProdutos"></tbody>
-    </table>
-
-    <button type="submit"
-            class="w-full bg-green-600 text-white py-3 font-black uppercase rounded text-base">
-      ENVIAR E SALVAR PDF
-    </button>
-  </form>
+<div class="bg-green-700 text-white text-center p-4">
+  <h1 class="text-sm font-bold uppercase">Cooperativa</h1>
+  <h2 class="text-4xl font-black text-yellow-400">CLAF</h2>
+  <p class="text-[10px] uppercase">Sistema de Entrega</p>
 </div>
 
-<!-- PDF (fora da tela) -->
-<div id="conteudoPdfExport"
-     class="fonte-cupom"
-     style="position:fixed; left:-9999px; top:0; width:76mm; padding:4mm; background:white;">
+<form id="form" class="p-3 space-y-3 fonte">
 
-  <div style="text-align:center; border-bottom:2px dashed black; padding-bottom:6px; margin-bottom:6px;">
-    <h2 style="font-size:14px;font-weight:bold;">COOPERATIVA CLAF</h2>
-    <p style="font-size:8px;">RECIBO DE ENTREGA</p>
-  </div>
+<label class="block text-xs font-bold">PRODUTOR</label>
+<input name="produtor" required class="w-full border px-2 py-1 text-sm font-bold">
 
-  <p style="font-size:10px;"><strong>PRODUTOR:</strong> <span id="pdfNome"></span></p>
-  <p style="font-size:10px;"><strong>DATA:</strong> <span id="pdfData"></span></p>
+<label class="block text-xs font-bold">DATA DA ENTREGA</label>
+<input type="date" name="data" id="dataEntrega" required
+       class="w-full border px-2 py-1 text-sm font-bold">
 
-  <table style="width:100%; margin-top:4px;">
-    <thead>
-      <tr style="border-bottom:1px solid black;">
-        <th style="text-align:left;font-size:9px;">PRODUTO</th>
-        <th style="text-align:right;font-size:9px;">QTD</th>
-      </tr>
-    </thead>
-    <tbody id="pdfItens"></tbody>
-  </table>
+<table class="w-full border text-sm">
+<thead class="bg-yellow-300">
+<tr><th class="text-left px-2 py-1">PRODUTO</th><th class="w-20">QTD</th></tr>
+</thead>
+<tbody id="produtos"></tbody>
+</table>
 
-  <div style="border-top:2px dashed black; margin-top:6px; padding-top:4px; text-align:center;">
-    <p style="font-size:7px;">Emitido em: <span id="pdfTimestamp"></span></p>
-  </div>
+<button class="w-full bg-green-600 text-white py-3 font-black uppercase text-sm">
+ENVIAR E SALVAR CUPOM
+</button>
+</form>
+</div>
+
+<!-- CUPOM -->
+<div id="cupom" class="fonte"
+style="position:fixed; left:-9999px; top:0; width:80mm; padding:4mm; background:white">
+
+<div class="text-center border-b border-dashed mb-2">
+  <div class="font-bold">COOPERATIVA CLAF</div>
+  <div class="text-[9px]">RECIBO DE ENTREGA</div>
+</div>
+
+<div class="text-[10px]"><b>PRODUTOR:</b> <span id="cProd"></span></div>
+<div class="text-[10px]"><b>DATA ENTREGA:</b> <span id="cData"></span></div>
+<div class="text-[10px]"><b>REGISTRO:</b> <span id="cHora"></span></div>
+
+<table class="w-full text-[9px] mt-2">
+<thead><tr><th align="left">PRODUTO</th><th align="right">QTD</th></tr></thead>
+<tbody id="cItens"></tbody>
+</table>
+
+<div class="border-t border-dashed mt-2 pt-1 text-center text-[8px]">
+CLAF • Sistema de Entrega
+</div>
 </div>
 
 <script>
-/* ===== ORDEM DEFINITIVA DOS PRODUTOS ===== */
-const produtos = [
-"Abacate","Abacaxi","Banana caturra","Banana maçã ou prata",
-"Laranja baiana, lima","Laranja comum","Maçã","Mamão","Manga",
-"Maracujá","Melancia","Melão","Pera","Pêssego",
-"Tangerina comum","Tangerina poncã",
-"Almeirão","Acelga","Agrião","Alface","Couve Manteiga",
-"Escarola","Espinafre","Quiabo","Repolho verde/roxo","Rúcula",
-"Abobrinha verde","Beterraba","Brócolis","Cenoura","Chuchu",
-"Couve flor","Milho verde/com até 3 palhas","Pepino","Tomate",
-"Vagem","Pão Caseiro/Artesanal",
-"Alho poró","Cebola","Cebolinha Verde","Limão","Pimentão",
-"Rabanete","Salsinha","Batata doce","Batata inglesa/monalisa"
+const ordemProdutos = [
+"ABACATE","ABACAXI","BANANA CATURRA","BANANA MAÇÃ OU PRATA",
+"LARANJA BAIANA LIMA","LARANJA COMUM","MAÇÃ","MAMÃO","MANGA",
+"MARACUJÁ","MELANCIA","MELÃO","PERA","PÊSSEGO",
+"TANGERINA COMUM","TANGERINA PONCÃ",
+"ALMEIRÃO","ACELGA","AGRIÃO","ALFACE","COUVE MANTEIGA",
+"ESCAROLA","ESPINAFRE","QUIABO","REPOLHO","RÚCULA",
+"ABOBRINHA","BETERRABA","BRÓCOLIS","CENOURA","CHUCHU",
+"COUVE FLOR","MILHO VERDE","PEPINO","TOMATE","VAGEM",
+"PÃO CASEIRO","ALHO PORÓ","CEBOLA","CEBOLINHA","LIMÃO",
+"PIMENTÃO","RABANETE","SALSINHA","BATATA DOCE","BATATA INGLESA"
 ];
 
-/* Data automática */
-const hoje = new Date();
-hoje.setMinutes(hoje.getMinutes() - hoje.getTimezoneOffset());
-document.getElementById("campoData").value = hoje.toISOString().split("T")[0];
-
-/* Montagem da tabela */
-const tbody = document.getElementById("listaProdutos");
-produtos.forEach(prod => {
-  const nameCampo = prod.normalize("NFD")
-    .replace(/[\u0300-\u036f]/g,"")
-    .replace(/[^a-zA-Z0-9]+/g,"_")
-    .toUpperCase();
-
-  const tr = document.createElement("tr");
-  tr.innerHTML = `
-    <td class="px-2 py-1 text-sm font-bold">${prod}</td>
-    <td class="px-2 py-1">
-      <input type="number" name="${nameCampo}" min="0"
-             class="w-full border text-center text-sm font-bold py-1">
-    </td>
-  `;
-  tbody.appendChild(tr);
+const tbody = document.getElementById("produtos");
+ordemProdutos.forEach(p=>{
+  const name = p.normalize("NFD").replace(/[^A-Z0-9]+/g,"_");
+  tbody.innerHTML += `
+  <tr>
+    <td class="px-2 py-1 font-bold">${p}</td>
+    <td><input type="number" name="${name}" min="0"
+               class="w-full border text-center"></td>
+  </tr>`;
 });
 
-/* Envio */
-document.getElementById("meuFormulario").addEventListener("submit", async e => {
-  e.preventDefault();
+const hoje = new Date();
+hoje.setMinutes(hoje.getMinutes()-hoje.getTimezoneOffset());
+document.getElementById("dataEntrega").value = hoje.toISOString().split("T")[0];
 
-  const form = e.target;
-  const params = new URLSearchParams(new FormData(form));
-  const itens = [];
+document.getElementById("form").addEventListener("submit", async e=>{
+e.preventDefault();
 
-  for (const [k,v] of params.entries()) {
-    if (!["produtor","data"].includes(k) && v && Number(v) > 0) {
-      itens.push({ nome: k.replace(/_/g," "), qtd: v });
-    }
-  }
+const fd = new FormData(e.target);
+const itens=[];
 
-  if (itens.length === 0) {
-    alert("Informe ao menos um produto.");
-    return;
-  }
+for (const [k,v] of fd.entries())
+  if(!["produtor","data"].includes(k) && v>0)
+    itens.push({n:k.replace(/_/g," "), q:v});
 
-  await fetch("https://script.google.com/macros/s/AKfycbxbMJoq3T06Yzly_IDIJrj-uJOcoofJYCXLPdoS6HgbA1Pk00i61G2oSBArMA177fpr/exec",
-    { method:"POST", mode:"no-cors", body: params });
+if(!itens.length){alert("Informe produtos");return;}
 
-  document.getElementById("pdfNome").innerText = form.produtor.value;
-  document.getElementById("pdfData").innerText = form.data.value;
-  document.getElementById("pdfTimestamp").innerText = new Date().toLocaleString("pt-BR");
+document.getElementById("cProd").innerText = fd.get("produtor").toUpperCase();
+document.getElementById("cData").innerText = fd.get("data");
+document.getElementById("cHora").innerText = new Date().toLocaleString("pt-BR");
 
-  const pdfItens = document.getElementById("pdfItens");
-  pdfItens.innerHTML = "";
-  itens.forEach(i=>{
-    pdfItens.innerHTML += `<tr>
-      <td style="font-size:9px;">${i.nome}</td>
-      <td style="text-align:right;font-size:9px;">${i.qtd}</td>
-    </tr>`;
-  });
+const ci=document.getElementById("cItens");
+ci.innerHTML="";
+itens.forEach(i=>ci.innerHTML+=
+`<tr><td>${i.n}</td><td align="right">${i.q}</td></tr>`);
 
-  await new Promise(r => setTimeout(r, 400));
-  await html2pdf().from(document.getElementById("conteudoPdfExport")).save();
+await fetch("Chttps://script.google.com/macros/s/AKfycbzXSYGXv2bCIbs6LdKNVqIlNLWYuJenHHtGjHwVdvtbJTzDUkgCRdjfgRWcWCmcZ9Zm/exec",
+{method:"POST",mode:"no-cors",body:new URLSearchParams(fd)});
+
+await new Promise(r=>setTimeout(r,300));
+
+html2pdf({
+filename:`CLAF_${fd.get("data")}_${fd.get("produtor").replace(/\s+/g,"_")}.pdf`,
+jsPDF:{unit:"mm",format:[80,200],orientation:"portrait"}
+}).from(document.getElementById("cupom")).save();
 });
 </script>
 
