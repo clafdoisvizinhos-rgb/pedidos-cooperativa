@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="pt-PT">
+<html lang="pt-BR">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Cooperativa CLAF - Pedidos</title>
+  <title>Cooperativa CLAF - Pedido</title>
 
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
@@ -11,9 +11,6 @@
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Courier+Prime:wght@400;700&display=swap');
     .fonte-cupom { font-family: 'Courier Prime', monospace; }
-    .cabecalho { border-bottom: 2px dashed black; padding-bottom: 8px; margin-bottom: 8px; text-align:center; }
-    input[type="number"]::-webkit-inner-spin-button,
-    input[type="number"]::-webkit-outer-spin-button { -webkit-appearance: none; }
   </style>
 </head>
 
@@ -60,9 +57,12 @@
   </form>
 </div>
 
-<!-- ÁREA DO PDF -->
-<div id="conteudoPdfExport" class="fonte-cupom" style="display:none; width:76mm; padding:4mm; background:white;">
-  <div class="cabecalho">
+<!-- CONTEÚDO DO PDF -->
+<div id="conteudoPdfExport"
+     class="fonte-cupom"
+     style="display:none; width:76mm; padding:4mm; background:white;">
+
+  <div style="text-align:center; border-bottom:2px dashed black; padding-bottom:8px; margin-bottom:8px;">
     <h2 style="font-size:16px;font-weight:bold;">COOPERATIVA CLAF</h2>
     <p style="font-size:9px;">RECIBO DE PEDIDO</p>
   </div>
@@ -73,4 +73,104 @@
   <table style="width:100%; margin-top:6px;">
     <thead>
       <tr style="border-bottom:1px solid black;">
-        <th style="text-align:left;font-size:10px
+        <th style="text-align:left;font-size:10px;">PRODUTO</th>
+        <th style="text-align:right;font-size:10px;">QTD</th>
+      </tr>
+    </thead>
+    <tbody id="pdfItens"></tbody>
+  </table>
+
+  <div style="border-top:2px dashed black; margin-top:8px; padding-top:6px; text-align:center;">
+    <p style="font-size:8px;">Emitido em: <span id="pdfTimestamp"></span></p>
+    <p style="font-size:10px;font-weight:bold;">Cooperativa CLAF agradece!</p>
+  </div>
+</div>
+
+<script>
+/* ================== PRODUTOS ================== */
+const produtos = [
+  "Abacate","Abacaxi","Banana caturra","Banana maçã ou prata",
+  "Laranja comum","Maçã","Mamão","Manga","Melancia","Melão",
+  "Pera","Pêssego","Tangerina comum"
+];
+
+/* ================== DATA AUTOMÁTICA ================== */
+const hoje = new Date();
+hoje.setMinutes(hoje.getMinutes() - hoje.getTimezoneOffset());
+document.getElementById("campoData").value = hoje.toISOString().split("T")[0];
+
+/* ================== LISTA DE PRODUTOS ================== */
+const tbody = document.getElementById("listaProdutos");
+
+produtos.forEach(prod => {
+  const nameCampo = prod.normalize("NFD")
+    .replace(/[\u0300-\u036f]/g,"")
+    .replace(/\s+/g,"_")
+    .toUpperCase();
+
+  const tr = document.createElement("tr");
+  tr.innerHTML = `
+    <td class="p-2 text-xs">${prod}</td>
+    <td class="p-2">
+      <input type="number" name="${nameCampo}" min="0"
+             class="w-full border text-center font-bold">
+    </td>
+  `;
+  tbody.appendChild(tr);
+});
+
+/* ================== ENVIO ================== */
+document.getElementById("meuFormulario").addEventListener("submit", async e => {
+  e.preventDefault();
+
+  const form = e.target;
+  const params = new URLSearchParams(new FormData(form));
+
+  const produtor = form.produtor.value;
+  const data = form.data.value;
+
+  const itens = [];
+  for (const [k,v] of params.entries()) {
+    if (!["produtor","data"].includes(k) && v && Number(v) > 0) {
+      itens.push({ nome: k.replace(/_/g," "), qtd: v });
+    }
+  }
+
+  if (itens.length === 0) {
+    alert("Informe ao menos um produto.");
+    return;
+  }
+
+  /* ===== ENVIA PARA O APPS SCRIPT ===== */
+  await fetch(
+    "https://script.google.com/macros/s/AKfycbxfXQ2_ruprP1CVyWd41jwlDDaB5jNAMJPNIaWQekNdwTDF8IBsfTR8hU2-LXnDS70M/exec",
+    { method:"POST", mode:"no-cors", body: params }
+  );
+
+  /* ===== PREPARA PDF ===== */
+  document.getElementById("pdfNome").innerText = produtor;
+  document.getElementById("pdfData").innerText = data;
+  document.getElementById("pdfTimestamp").innerText = new Date().toLocaleString("pt-BR");
+
+  const pdfItens = document.getElementById("pdfItens");
+  pdfItens.innerHTML = "";
+  itens.forEach(i=>{
+    pdfItens.innerHTML += `<tr>
+      <td style="font-size:10px;">${i.nome}</td>
+      <td style="text-align:right;font-size:10px;">${i.qtd}</td>
+    </tr>`;
+  });
+
+  /* ===== DELAY CRÍTICO ===== */
+  await new Promise(r => setTimeout(r, 300));
+
+  await html2pdf()
+    .from(document.getElementById("conteudoPdfExport"))
+    .save();
+
+  location.reload();
+});
+</script>
+
+</body>
+</html>
