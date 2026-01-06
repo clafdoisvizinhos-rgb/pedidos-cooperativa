@@ -16,12 +16,12 @@
 
 <body class="bg-gray-100 min-h-screen font-sans">
 
-<div class="max-w-[360px] mx-auto bg-white min-h-screen shadow">
+<div class="max-w-[420px] mx-auto bg-white min-h-screen shadow">
 
   <!-- Cabeçalho -->
-  <div class="bg-green-700 text-white text-center p-4">
+  <div class="bg-green-700 text-white text-center p-5">
     <h1 class="text-lg font-bold uppercase">Cooperativa</h1>
-    <h2 class="text-4xl font-black uppercase text-yellow-400">CLAF</h2>
+    <h2 class="text-5xl font-black uppercase text-yellow-400">CLAF</h2>
     <p class="text-xs uppercase mt-1">Sistema de Entrega</p>
   </div>
 
@@ -29,38 +29,38 @@
   <form id="meuFormulario" class="p-4 space-y-4">
 
     <div>
-      <label class="text-xs font-bold uppercase">Produtor</label>
+      <label class="text-sm font-bold uppercase">Produtor</label>
       <input type="text" name="produtor" id="inputNome" required
-             class="w-full border p-2 font-bold">
+             class="w-full border p-3 font-bold text-base">
     </div>
 
     <div>
-      <label class="text-xs font-bold uppercase">Data</label>
+      <label class="text-sm font-bold uppercase">Data</label>
       <input type="date" name="data" id="campoData" required
-             class="w-full border p-2 font-bold">
+             class="w-full border p-3 font-bold text-base">
     </div>
 
-    <table class="w-full fonte-cupom border mt-2">
+    <table class="w-full fonte-cupom border mt-3">
       <thead>
         <tr class="bg-yellow-300">
-          <th class="text-left p-2 text-xs">PRODUTO</th>
-          <th class="text-center p-2 text-xs">QTD</th>
+          <th class="text-left p-3 text-sm">PRODUTO</th>
+          <th class="text-center p-3 text-sm w-28">QTD</th>
         </tr>
       </thead>
       <tbody id="listaProdutos"></tbody>
     </table>
 
     <button type="submit"
-            class="w-full bg-green-600 text-white py-3 font-black uppercase rounded">
+            class="w-full bg-green-600 text-white py-4 font-black uppercase rounded text-lg">
       ENVIAR E SALVAR PDF
     </button>
   </form>
 </div>
 
-<!-- CONTEÚDO DO PDF -->
+<!-- CONTEÚDO DO PDF (fora da tela, mas visível ao html2pdf) -->
 <div id="conteudoPdfExport"
      class="fonte-cupom"
-     style="display:none; width:76mm; padding:4mm; background:white;">
+     style="position:fixed; left:-9999px; top:0; width:76mm; padding:4mm; background:white;">
 
   <div style="text-align:center; border-bottom:2px dashed black; padding-bottom:8px; margin-bottom:8px;">
     <h2 style="font-size:16px;font-weight:bold;">COOPERATIVA CLAF</h2>
@@ -90,8 +90,14 @@
 /* ================== PRODUTOS ================== */
 const produtos = [
   "Abacate","Abacaxi","Banana caturra","Banana maçã ou prata",
-  "Laranja comum","Maçã","Mamão","Manga","Melancia","Melão",
-  "Pera","Pêssego","Tangerina comum"
+  "Laranja comum","Maçã","Mamão","Manga","Maracujá","Melancia",
+  "Melão","Pera","Pêssego","Tangerina comum","Tangerina poncã",
+  "Alface","Acelga","Agrião","Almeirão","Couve manteiga",
+  "Escarola","Espinafre","Repolho","Rúcula","Abobrinha",
+  "Beterraba","Brócolis","Cenoura","Chuchu","Couve-flor",
+  "Milho verde","Pepino","Tomate","Vagem","Batata doce",
+  "Batata inglesa","Cebola","Cebolinha","Salsinha",
+  "Alho poró","Pimentão","Rabanete","Limão"
 ];
 
 /* ================== DATA AUTOMÁTICA ================== */
@@ -110,10 +116,10 @@ produtos.forEach(prod => {
 
   const tr = document.createElement("tr");
   tr.innerHTML = `
-    <td class="p-2 text-xs">${prod}</td>
-    <td class="p-2">
+    <td class="p-3 text-base font-bold">${prod}</td>
+    <td class="p-3">
       <input type="number" name="${nameCampo}" min="0"
-             class="w-full border text-center font-bold">
+             class="w-full border text-center text-lg font-bold p-2">
     </td>
   `;
   tbody.appendChild(tr);
@@ -143,7 +149,7 @@ document.getElementById("meuFormulario").addEventListener("submit", async e => {
 
   /* ===== ENVIA PARA O APPS SCRIPT ===== */
   await fetch(
-    "https://script.google.com/macros/s/AKfycbxfXQ2_ruprP1CVyWd41jwlDDaB5jNAMJPNIaWQekNdwTDF8IBsfTR8hU2-LXnDS70M/exec",
+    "COLE_AQUI_A_URL_DO_WEB_APP",
     { method:"POST", mode:"no-cors", body: params }
   );
 
@@ -155,13 +161,14 @@ document.getElementById("meuFormulario").addEventListener("submit", async e => {
   const pdfItens = document.getElementById("pdfItens");
   pdfItens.innerHTML = "";
   itens.forEach(i=>{
-    pdfItens.innerHTML += `<tr>
-      <td style="font-size:10px;">${i.nome}</td>
-      <td style="text-align:right;font-size:10px;">${i.qtd}</td>
-    </tr>`;
+    pdfItens.innerHTML += `
+      <tr>
+        <td style="font-size:10px;">${i.nome}</td>
+        <td style="text-align:right;font-size:10px;">${i.qtd}</td>
+      </tr>`;
   });
 
-  /* ===== DELAY CRÍTICO ===== */
+  /* ===== DELAY CRÍTICO PARA PDF ===== */
   await new Promise(r => setTimeout(r, 300));
 
   await html2pdf()
