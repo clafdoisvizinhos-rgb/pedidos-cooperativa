@@ -152,7 +152,7 @@ itens.forEach(i=>{
 document.getElementById("cupomPreview").classList.remove("hidden");
 
 /* ENVIA PARA PLANILHA */
-await fetch("COLE_AQUI_A_URL_DO_WEB_APP", {
+await fetch("https://script.google.com/macros/s/AKfycbwRLaPiXKn0t37MCbXptM0pHkGXzgBww0ecU3Epv0y0WCO0Vl8JMdD1IX_RCsL0ZjsX/exec", {
   method:"POST",
   mode:"no-cors",
   body:new URLSearchParams(fd)
