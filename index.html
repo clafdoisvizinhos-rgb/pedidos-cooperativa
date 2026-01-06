@@ -10,12 +10,13 @@
 
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Courier+Prime:wght@400;700&display=swap');
-.fonte { font-family:'Courier Prime', monospace; }
+.cupom { font-family:'Courier Prime', monospace; }
 </style>
 </head>
 
 <body class="bg-gray-100">
 
+<!-- CONTAINER PRINCIPAL -->
 <div class="max-w-[380px] mx-auto bg-white shadow min-h-screen">
 
 <!-- CABEÇALHO -->
@@ -26,7 +27,7 @@
 </div>
 
 <!-- FORMULÁRIO -->
-<form id="formEntrega" class="p-3 space-y-3 fonte">
+<form id="formEntrega" class="p-3 space-y-3 cupom">
 
 <label class="block text-xs font-bold">PRODUTOR</label>
 <input name="produtor" required class="w-full border px-2 py-1 text-sm font-bold">
@@ -53,17 +54,17 @@ SALVAR E ENVIAR
 </form>
 </div>
 
-<!-- ESBOÇO / CUPOM VISÍVEL -->
-<div id="cupomPreview" class="fonte max-w-[320px] mx-auto bg-white mt-4 p-3 border hidden">
+<!-- CUPOM / ESBOÇO VISÍVEL -->
+<div id="cupom" class="cupom max-w-[300px] mx-auto bg-white mt-4 p-3 border hidden">
 
 <div class="text-center border-b border-dashed mb-2">
   <div class="font-bold">COOPERATIVA CLAF</div>
   <div class="text-[9px]">RECIBO DE ENTREGA</div>
 </div>
 
-<div class="text-[10px]"><b>PRODUTOR:</b> <span id="pProd"></span></div>
-<div class="text-[10px]"><b>DATA ENTREGA:</b> <span id="pData"></span></div>
-<div class="text-[10px]"><b>REGISTRO:</b> <span id="pHora"></span></div>
+<div class="text-[10px]"><b>PRODUTOR:</b> <span id="cProd"></span></div>
+<div class="text-[10px]"><b>DATA:</b> <span id="cData"></span></div>
+<div class="text-[10px]"><b>HORA:</b> <span id="cHora"></span></div>
 
 <table class="w-full text-[9px] mt-2">
 <thead>
@@ -72,7 +73,7 @@ SALVAR E ENVIAR
   <th align="right">QTD</th>
 </tr>
 </thead>
-<tbody id="pItens"></tbody>
+<tbody id="cItens"></tbody>
 </table>
 
 <div class="border-t border-dashed mt-2 pt-1 text-center text-[8px]">
@@ -103,7 +104,6 @@ const produtos = [
 "PIMENTÃO","RABANETE","SALSINHA","BATATA DOCE","BATATA INGLESA"
 ];
 
-/* MONTA LISTA */
 const tbody = document.getElementById("listaProdutos");
 produtos.forEach(p=>{
   const name = p.normalize("NFD").replace(/[^A-Z0-9]+/g,"_");
@@ -137,45 +137,47 @@ for (const [k,v] of fd.entries()) {
 
 if(!itens.length){alert("Informe ao menos um produto.");return;}
 
-/* PREENCHE ESBOÇO */
-document.getElementById("pProd").innerText = fd.get("produtor").toUpperCase();
-document.getElementById("pData").innerText = fd.get("data");
+/* PREENCHE CUPOM */
+document.getElementById("cProd").innerText = fd.get("produtor").toUpperCase();
+document.getElementById("cData").innerText = fd.get("data");
 const agora = new Date();
-document.getElementById("pHora").innerText = agora.toLocaleString("pt-BR");
+document.getElementById("cHora").innerText = agora.toLocaleTimeString("pt-BR");
 
-const pItens=document.getElementById("pItens");
-pItens.innerHTML="";
+const cItens=document.getElementById("cItens");
+cItens.innerHTML="";
 itens.forEach(i=>{
-  pItens.innerHTML += `<tr><td>${i.nome}</td><td align="right">${i.qtd}</td></tr>`;
+  cItens.innerHTML += `<tr><td>${i.nome}</td><td align="right">${i.qtd}</td></tr>`;
 });
 
-document.getElementById("cupomPreview").classList.remove("hidden");
+document.getElementById("cupom").classList.remove("hidden");
 
 /* ENVIA PARA PLANILHA */
+// 👉 COLE AQUI A URL DO SEU WEB APP
 await fetch("https://script.google.com/macros/s/AKfycbwRLaPiXKn0t37MCbXptM0pHkGXzgBww0ecU3Epv0y0WCO0Vl8JMdD1IX_RCsL0ZjsX/exec", {
   method:"POST",
   mode:"no-cors",
   body:new URLSearchParams(fd)
 });
 
-/* GERA PDF EM NOVA ABA */
-const opt = {
-  margin: 0,
-  filename: `CLAF_${fd.get("data")}_${fd.get("produtor").replace(/\s+/g,"_")}_${agora.getHours()}-${agora.getMinutes()}.pdf`,
-  html2canvas: { scale:2 },
-  jsPDF: { unit:"mm", format:[80,200], orientation:"portrait" }
-};
+/* GERA PDF E BAIXA AUTOMATICAMENTE */
+const nomeArquivo =
+  `Pedido_${fd.get("produtor").replace(/\s+/g,"_")}_${fd.get("data")}_${agora.getHours()}-${agora.getMinutes()}.pdf`;
 
-html2pdf().set(opt).from(document.getElementById("cupomPreview")).toPdf().get('pdf')
-.then(pdf=>{
-  const blob = pdf.output('bloburl');
-  window.open(blob,'_blank');
-});
+html2pdf()
+  .set({
+    margin: 0,
+    filename: nomeArquivo,
+    html2canvas: { scale: 2 },
+    jsPDF: { unit:"mm", format:[80,200], orientation:"portrait" }
+  })
+  .from(document.getElementById("cupom"))
+  .save();
 
 /* BOTÃO NOVO PEDIDO */
 const btnNovo=document.getElementById("btnNovo");
 btnNovo.classList.remove("hidden");
 btnNovo.onclick=()=>location.reload();
+
 });
 </script>
 
