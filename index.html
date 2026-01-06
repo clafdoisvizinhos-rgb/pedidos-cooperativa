@@ -1,172 +1,76 @@
 <!DOCTYPE html>
 <html lang="pt-PT">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Cooperativa Familiar - Pedidos</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Cooperativa CLAF - Pedidos</title>
 
-    <style>
-        @import url('https://fonts.googleapis.com/css2?family=Courier+Prime:wght@400;700&display=swap');
-        .fonte-cupom { font-family: 'Courier Prime', monospace; }
-        .cabecalho-tabela { background-color: #ffff00; }
-        input[type="number"] { appearance: textfield; }
-        input[type="number"]::-webkit-inner-spin-button,
-        input[type="number"]::-webkit-outer-spin-button { appearance: none; margin: 0; }
-        input { color: #000 !important; }
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
 
-        @keyframes pop {
-            0% { transform: scale(0.8); opacity: 0; }
-            100% { transform: scale(1); opacity: 1; }
-        }
-        .animate-pop { animation: pop 0.3s ease-out forwards; }
-        .btn-shadow { box-shadow: 0 4px 0 rgb(21, 128, 61); }
-        .btn-shadow:active { box-shadow: none; transform: translateY(2px); }
-
-        #wrapper-pdf {
-            position: fixed;
-            inset: 0;
-            background: #ffffff;
-            display: none;
-            flex-direction: column;
-            align-items: center;
-            padding-top: 20px;
-            z-index: 99999;
-        }
-
-        #conteudoPdfExport {
-            background: white;
-            width: 76mm;
-            padding: 4mm;
-        }
-    </style>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Courier+Prime:wght@400;700&display=swap');
+    .fonte-cupom { font-family: 'Courier Prime', monospace; }
+    .cabecalho { border-bottom: 2px dashed black; padding-bottom: 8px; margin-bottom: 8px; text-align:center; }
+    input[type="number"]::-webkit-inner-spin-button,
+    input[type="number"]::-webkit-outer-spin-button { -webkit-appearance: none; }
+  </style>
 </head>
 
-<body class="bg-gray-100 min-h-screen pb-6 font-sans">
+<body class="bg-gray-100 min-h-screen font-sans">
 
-<div class="max-w-[360px] mx-auto bg-white min-h-screen shadow-xl border-x border-gray-200">
+<div class="max-w-[360px] mx-auto bg-white min-h-screen shadow">
 
-    <div class="bg-green-700 p-6 text-white text-center">
-        <h1 class="text-xl font-bold uppercase italic">Cooperativa</h1>
-        <h2 class="text-5xl font-black uppercase text-yellow-400 -mt-1">CLAF</h2>
-        <p class="text-[9px] font-bold mt-2 uppercase">Sistema de Entrega</p>
+  <!-- Cabeçalho -->
+  <div class="bg-green-700 text-white text-center p-4">
+    <h1 class="text-lg font-bold uppercase">Cooperativa</h1>
+    <h2 class="text-4xl font-black uppercase text-yellow-400">CLAF</h2>
+    <p class="text-xs uppercase mt-1">Sistema de Entrega</p>
+  </div>
+
+  <!-- Formulário -->
+  <form id="meuFormulario" class="p-4 space-y-4">
+
+    <div>
+      <label class="text-xs font-bold uppercase">Produtor</label>
+      <input type="text" name="produtor" id="inputNome" required
+             class="w-full border p-2 font-bold">
     </div>
 
-    <form id="meuFormulario" class="p-3 space-y-4">
-
-        <!-- PRODUTOR E DATA -->
-        <div class="bg-gray-50 p-3 rounded border">
-            <label class="block text-[10px] font-black uppercase italic">Nome do produtor</label>
-            <input type="text" name="produtor" id="inputNome" required
-                   class="w-full p-2 border rounded font-bold">
-
-            <label class="block text-[10px] font-black uppercase italic mt-2">Data</label>
-            <input type="date" name="data" id="campoData" required
-                   class="w-full p-2 border rounded font-bold">
-        </div>
-
-        <!-- PRODUTOS -->
-        <div class="border rounded bg-white">
-            <table class="w-full fonte-cupom">
-                <thead>
-                    <tr class="cabecalho-tabela">
-                        <th class="p-2 text-left text-xs">PRODUTO</th>
-                        <th class="p-2 text-center text-xs">QTD</th>
-                    </tr>
-                </thead>
-                <tbody id="listaProdutos"></tbody>
-            </table>
-        </div>
-
-        <button type="submit" id="btnEnviar"
-                class="w-full bg-green-600 text-white py-4 rounded-xl font-black uppercase btn-shadow">
-            ENVIAR E SALVAR PDF
-        </button>
-    </form>
-</div>
-
-<!-- PDF -->
-<div id="wrapper-pdf">
-    <div id="conteudoPdfExport" class="fonte-cupom">
-        <p><strong>PRODUTOR:</strong> <span id="pdfNome"></span></p>
-        <p><strong>DATA:</strong> <span id="pdfData"></span></p>
-        <table>
-            <tbody id="pdfItens"></tbody>
-        </table>
-        <p style="font-size:8px;">Emitido em <span id="pdfTimestamp"></span></p>
+    <div>
+      <label class="text-xs font-bold uppercase">Data</label>
+      <input type="date" name="data" id="campoData" required
+             class="w-full border p-2 font-bold">
     </div>
+
+    <table class="w-full fonte-cupom border mt-2">
+      <thead>
+        <tr class="bg-yellow-300">
+          <th class="text-left p-2 text-xs">PRODUTO</th>
+          <th class="text-center p-2 text-xs">QTD</th>
+        </tr>
+      </thead>
+      <tbody id="listaProdutos"></tbody>
+    </table>
+
+    <button type="submit"
+            class="w-full bg-green-600 text-white py-3 font-black uppercase rounded">
+      ENVIAR E SALVAR PDF
+    </button>
+  </form>
 </div>
 
-<script>
-const produtos = [
- "Abacate","Abacaxi","Banana caturra","Banana maçã ou prata","Laranja comum",
- "Maçã","Mamão","Manga","Melancia","Melão","Pera","Pêssego","Tangerina comum",
- "Alface","Couve","Repolho","Rúcula","Cenoura","Tomate","Batata doce"
-];
+<!-- ÁREA DO PDF -->
+<div id="conteudoPdfExport" class="fonte-cupom" style="display:none; width:76mm; padding:4mm; background:white;">
+  <div class="cabecalho">
+    <h2 style="font-size:16px;font-weight:bold;">COOPERATIVA CLAF</h2>
+    <p style="font-size:9px;">RECIBO DE PEDIDO</p>
+  </div>
 
-const hoje = new Date();
-hoje.setMinutes(hoje.getMinutes() - hoje.getTimezoneOffset());
-document.getElementById("campoData").value = hoje.toISOString().split("T")[0];
+  <p style="font-size:11px;"><strong>PRODUTOR:</strong> <span id="pdfNome"></span></p>
+  <p style="font-size:11px;"><strong>DATA:</strong> <span id="pdfData"></span></p>
 
-const tbody = document.getElementById("listaProdutos");
-
-produtos.forEach((prod, i) => {
-    const nomeCampo = prod.normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/\s+/g,"_").toUpperCase();
-    const tr = document.createElement("tr");
-    tr.innerHTML = `
-        <td class="p-2 text-xs">${prod}</td>
-        <td class="p-1">
-            <input type="number" name="${nomeCampo}" min="0"
-                   class="w-full border text-center font-bold">
-        </td>`;
-    tbody.appendChild(tr);
-});
-
-document.getElementById("meuFormulario").addEventListener("submit", async e => {
-    e.preventDefault();
-
-    const params = new URLSearchParams(new FormData(e.target));
-    const produtor = document.getElementById("inputNome").value;
-    const data = document.getElementById("campoData").value;
-
-    const itens = [];
-    for (const [k,v] of params.entries()) {
-        if (!["produtor","data"].includes(k) && v && Number(v) > 0) {
-            itens.push({nome:k, qtd:v});
-        }
-    }
-
-    if (itens.length === 0) {
-        alert("Informe ao menos um produto.");
-        return;
-    }
-
-    await fetch(
-      "https://script.google.com/macros/s/AKfycbxuR_nXWdTWFCvrm9JlHjECsgyIO9BGeMVP4EBPMovbzf5tWFDp1c0fvd1pvTdN2pc3/exec",
-      { method:"POST", mode:"no-cors", body: params }
-    );
-
-    document.getElementById("pdfNome").innerText = produtor;
-    document.getElementById("pdfData").innerText = data;
-    document.getElementById("pdfTimestamp").innerText = new Date().toLocaleString("pt-BR");
-
-    const pdfItens = document.getElementById("pdfItens");
-    pdfItens.innerHTML = "";
-    itens.forEach(i=>{
-        pdfItens.innerHTML += `<tr><td>${i.nome}</td><td>${i.qtd}</td></tr>`;
-    });
-
-    // força o navegador a renderizar o conteúdo antes do PDF
-await new Promise(resolve => setTimeout(resolve, 300));
-
-await html2pdf()
-  .from(document.getElementById("conteudoPdfExport"))
-  .save();
-
-    location.reload();
-});
-</script>
-
-</body>
-</html>
+  <table style="width:100%; margin-top:6px;">
+    <thead>
+      <tr style="border-bottom:1px solid black;">
+        <th style="text-align:left;font-size:10px
