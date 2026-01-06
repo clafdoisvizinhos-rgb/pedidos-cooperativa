@@ -157,7 +157,13 @@ document.getElementById("meuFormulario").addEventListener("submit", async e => {
         pdfItens.innerHTML += `<tr><td>${i.nome}</td><td>${i.qtd}</td></tr>`;
     });
 
-    await html2pdf().from(document.getElementById("conteudoPdfExport")).save();
+    // força o navegador a renderizar o conteúdo antes do PDF
+await new Promise(resolve => setTimeout(resolve, 300));
+
+await html2pdf()
+  .from(document.getElementById("conteudoPdfExport"))
+  .save();
+
     location.reload();
 });
 </script>
