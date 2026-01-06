@@ -119,7 +119,7 @@ ci.innerHTML="";
 itens.forEach(i=>ci.innerHTML+=
 `<tr><td>${i.n}</td><td align="right">${i.q}</td></tr>`);
 
-await fetch("Chttps://script.google.com/macros/s/AKfycbzXSYGXv2bCIbs6LdKNVqIlNLWYuJenHHtGjHwVdvtbJTzDUkgCRdjfgRWcWCmcZ9Zm/exec",
+await fetch("https://script.google.com/macros/s/AKfycbxtbMkL0FlRgxscgqJeItcC5n3t9Hx_5soim2WgILnQJbIE1z-2Kgum6sauDNNNwWhX/exec",
 {method:"POST",mode:"no-cors",body:new URLSearchParams(fd)});
 
 await new Promise(r=>setTimeout(r,300));
