@@ -18,59 +18,73 @@
 
 <div class="max-w-[380px] mx-auto bg-white shadow min-h-screen">
 
-<div class="bg-green-700 text-white text-center p-4">
-  <h1 class="text-sm font-bold uppercase">Cooperativa</h1>
-  <h2 class="text-4xl font-black text-yellow-400">CLAF</h2>
-  <p class="text-[10px] uppercase">Sistema de Entrega</p>
+  <!-- CABEÇALHO -->
+  <div class="bg-green-700 text-white text-center p-4">
+    <h1 class="text-sm font-bold uppercase">Cooperativa</h1>
+    <h2 class="text-4xl font-black text-yellow-400">CLAF</h2>
+    <p class="text-[10px] uppercase">Sistema de Entrega</p>
+  </div>
+
+  <!-- FORMULÁRIO -->
+  <form id="formEntrega" class="p-3 space-y-3 fonte">
+
+    <label class="block text-xs font-bold">PRODUTOR</label>
+    <input name="produtor" required
+           class="w-full border px-2 py-1 text-sm font-bold">
+
+    <label class="block text-xs font-bold">DATA DA ENTREGA</label>
+    <input type="date" name="data" id="dataEntrega" required
+           class="w-full border px-2 py-1 text-sm font-bold">
+
+    <table class="w-full border text-sm">
+      <thead class="bg-yellow-300">
+        <tr>
+          <th class="text-left px-2 py-1">PRODUTO</th>
+          <th class="w-20 text-center">QTD</th>
+        </tr>
+      </thead>
+      <tbody id="listaProdutos"></tbody>
+    </table>
+
+    <button type="submit"
+            class="w-full bg-green-600 text-white py-3 font-black uppercase text-sm">
+      ENVIAR E SALVAR CUPOM
+    </button>
+
+  </form>
 </div>
 
-<form id="form" class="p-3 space-y-3 fonte">
-
-<label class="block text-xs font-bold">PRODUTOR</label>
-<input name="produtor" required class="w-full border px-2 py-1 text-sm font-bold">
-
-<label class="block text-xs font-bold">DATA DA ENTREGA</label>
-<input type="date" name="data" id="dataEntrega" required
-       class="w-full border px-2 py-1 text-sm font-bold">
-
-<table class="w-full border text-sm">
-<thead class="bg-yellow-300">
-<tr><th class="text-left px-2 py-1">PRODUTO</th><th class="w-20">QTD</th></tr>
-</thead>
-<tbody id="produtos"></tbody>
-</table>
-
-<button class="w-full bg-green-600 text-white py-3 font-black uppercase text-sm">
-ENVIAR E SALVAR CUPOM
-</button>
-</form>
-</div>
-
-<!-- CUPOM -->
+<!-- CUPOM (FORA DA TELA, VISÍVEL AO PDF) -->
 <div id="cupom" class="fonte"
-style="position:fixed; left:-9999px; top:0; width:80mm; padding:4mm; background:white">
+     style="position:fixed; left:-9999px; top:0; width:80mm; padding:4mm; background:white">
 
-<div class="text-center border-b border-dashed mb-2">
-  <div class="font-bold">COOPERATIVA CLAF</div>
-  <div class="text-[9px]">RECIBO DE ENTREGA</div>
-</div>
+  <div class="text-center border-b border-dashed mb-2">
+    <div class="font-bold">COOPERATIVA CLAF</div>
+    <div class="text-[9px]">RECIBO DE ENTREGA</div>
+  </div>
 
-<div class="text-[10px]"><b>PRODUTOR:</b> <span id="cProd"></span></div>
-<div class="text-[10px]"><b>DATA ENTREGA:</b> <span id="cData"></span></div>
-<div class="text-[10px]"><b>REGISTRO:</b> <span id="cHora"></span></div>
+  <div class="text-[10px]"><b>PRODUTOR:</b> <span id="cProd"></span></div>
+  <div class="text-[10px]"><b>DATA ENTREGA:</b> <span id="cData"></span></div>
+  <div class="text-[10px]"><b>REGISTRO:</b> <span id="cHora"></span></div>
 
-<table class="w-full text-[9px] mt-2">
-<thead><tr><th align="left">PRODUTO</th><th align="right">QTD</th></tr></thead>
-<tbody id="cItens"></tbody>
-</table>
+  <table class="w-full text-[9px] mt-2">
+    <thead>
+      <tr>
+        <th align="left">PRODUTO</th>
+        <th align="right">QTD</th>
+      </tr>
+    </thead>
+    <tbody id="cItens"></tbody>
+  </table>
 
-<div class="border-t border-dashed mt-2 pt-1 text-center text-[8px]">
-CLAF • Sistema de Entrega
-</div>
+  <div class="border-t border-dashed mt-2 pt-1 text-center text-[8px]">
+    CLAF • Sistema de Entrega
+  </div>
 </div>
 
 <script>
-const ordemProdutos = [
+/* ORDEM DEFINITIVA DOS PRODUTOS */
+const produtos = [
 "ABACATE","ABACAXI","BANANA CATURRA","BANANA MAÇÃ OU PRATA",
 "LARANJA BAIANA LIMA","LARANJA COMUM","MAÇÃ","MAMÃO","MANGA",
 "MARACUJÁ","MELANCIA","MELÃO","PERA","PÊSSEGO",
@@ -83,51 +97,73 @@ const ordemProdutos = [
 "PIMENTÃO","RABANETE","SALSINHA","BATATA DOCE","BATATA INGLESA"
 ];
 
-const tbody = document.getElementById("produtos");
-ordemProdutos.forEach(p=>{
+const tbody = document.getElementById("listaProdutos");
+produtos.forEach(p=>{
   const name = p.normalize("NFD").replace(/[^A-Z0-9]+/g,"_");
   tbody.innerHTML += `
-  <tr>
-    <td class="px-2 py-1 font-bold">${p}</td>
-    <td><input type="number" name="${name}" min="0"
-               class="w-full border text-center"></td>
-  </tr>`;
+    <tr>
+      <td class="px-2 py-1 font-bold">${p}</td>
+      <td>
+        <input type="number" name="${name}" min="0"
+               class="w-full border text-center">
+      </td>
+    </tr>`;
 });
 
+/* DATA AUTOMÁTICA */
 const hoje = new Date();
-hoje.setMinutes(hoje.getMinutes()-hoje.getTimezoneOffset());
+hoje.setMinutes(hoje.getMinutes() - hoje.getTimezoneOffset());
 document.getElementById("dataEntrega").value = hoje.toISOString().split("T")[0];
 
-document.getElementById("form").addEventListener("submit", async e=>{
-e.preventDefault();
+/* SUBMIT */
+document.getElementById("formEntrega").addEventListener("submit", async e => {
+  e.preventDefault();
 
-const fd = new FormData(e.target);
-const itens=[];
+  const btn = e.target.querySelector("button");
+  btn.disabled = true;
+  btn.innerText = "ENVIANDO...";
 
-for (const [k,v] of fd.entries())
-  if(!["produtor","data"].includes(k) && v>0)
-    itens.push({n:k.replace(/_/g," "), q:v});
+  const fd = new FormData(e.target);
+  const itens = [];
 
-if(!itens.length){alert("Informe produtos");return;}
+  for (const [k,v] of fd.entries()) {
+    if (!["produtor","data"].includes(k) && v > 0) {
+      itens.push({ nome:k.replace(/_/g," "), qtd:v });
+    }
+  }
 
-document.getElementById("cProd").innerText = fd.get("produtor").toUpperCase();
-document.getElementById("cData").innerText = fd.get("data");
-document.getElementById("cHora").innerText = new Date().toLocaleString("pt-BR");
+  if (!itens.length) {
+    alert("Informe ao menos um produto.");
+    btn.disabled = false;
+    btn.innerText = "ENVIAR E SALVAR CUPOM";
+    return;
+  }
 
-const ci=document.getElementById("cItens");
-ci.innerHTML="";
-itens.forEach(i=>ci.innerHTML+=
-`<tr><td>${i.n}</td><td align="right">${i.q}</td></tr>`);
+  document.getElementById("cProd").innerText = fd.get("produtor").toUpperCase();
+  document.getElementById("cData").innerText = fd.get("data");
+  document.getElementById("cHora").innerText = new Date().toLocaleString("pt-BR");
 
-await fetch("https://script.google.com/macros/s/AKfycbxtbMkL0FlRgxscgqJeItcC5n3t9Hx_5soim2WgILnQJbIE1z-2Kgum6sauDNNNwWhX/exec",
-{method:"POST",mode:"no-cors",body:new URLSearchParams(fd)});
+  const cItens = document.getElementById("cItens");
+  cItens.innerHTML = "";
+  itens.forEach(i=>{
+    cItens.innerHTML += `<tr><td>${i.nome}</td><td align="right">${i.qtd}</td></tr>`;
+  });
 
-await new Promise(r=>setTimeout(r,300));
+  await fetch("https://script.google.com/macros/s/AKfycbxtbMkL0FlRgxscgqJeItcC5n3t9Hx_5soim2WgILnQJbIE1z-2Kgum6sauDNNNwWhX/exec", {
+    method:"POST",
+    mode:"no-cors",
+    body:new URLSearchParams(fd)
+  });
 
-html2pdf({
-filename:`CLAF_${fd.get("data")}_${fd.get("produtor").replace(/\s+/g,"_")}.pdf`,
-jsPDF:{unit:"mm",format:[80,200],orientation:"portrait"}
-}).from(document.getElementById("cupom")).save();
+  await new Promise(r=>setTimeout(r,300));
+
+  html2pdf({
+    filename:`CLAF_${fd.get("data")}_${fd.get("produtor").replace(/\s+/g,"_")}.pdf`,
+    jsPDF:{unit:"mm",format:[80,200],orientation:"portrait"}
+  }).from(document.getElementById("cupom")).save();
+
+  btn.disabled = false;
+  btn.innerText = "ENVIAR E SALVAR CUPOM";
 });
 </script>
 
