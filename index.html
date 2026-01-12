@@ -1,90 +1,70 @@
-<!DOCTYPE html>
-<html lang="pt-br">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>CLAF Pedidos</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-</head>
-<body class="bg-gray-200">
-    <div class="max-w-md mx-auto bg-white min-h-screen">
-        <div class="bg-green-800 p-8 text-center text-white">
-            <h1 class="text-5xl font-black text-yellow-400">CLAF</h1>
-            <p class="font-bold">COOPERATIVA FAMILIAR</p>
-        </div>
+<script>
+    // 1. COLOQUE SUA URL ENTRE AS ASPAS ABAIXO
+    const URL_SISTEMA = "SUA_URL_DO_GOOGLE_AQUI";
 
-        <form id="f_main" class="p-4 space-y-4">
-            <input type="text" id="f_nome" placeholder="NOME DO PRODUTOR" class="w-full p-4 border-2 rounded-lg font-bold" required>
-            <input type="date" id="f_data" class="w-full p-4 border-2 rounded-lg font-bold" required>
+    const tb_corpo = document.getElementById('f_tabela');
+    const campo_data = document.getElementById('f_data');
+    if(campo_data) campo_data.value = new Date().toISOString().split('T')[0];
 
-            <div class="border-2 rounded-lg">
-                <table class="w-full">
-                    <thead class="bg-gray-100">
-                        <tr><th class="p-2 text-left">PRODUTO</th><th class="p-2 text-center w-24">QTD</th></tr>
-                    </thead>
-                    <tbody id="f_tabela">
-                        <tr><td colspan="2" class="p-10 text-center">Buscando produtos...</td></tr>
-                    </tbody>
-                </table>
-            </div>
-            <button type="submit" id="f_btn" class="w-full bg-green-600 text-white p-6 rounded-xl font-black text-xl">ENVIAR PEDIDO</button>
-        </form>
-    </div>
-
-    <script>
-        // COLOQUE SUA URL ABAIXO ENTRE AS ASPAS
-        const URL_WEBAPP = "SUA_URL_AQUI";
-
-        const div_tab = document.getElementById('f_tabela');
-        document.getElementById('f_data').value = new Date().toISOString().split('T')[0];
-
-        // Carregar produtos
-        fetch(URL_WEBAPP)
-            .then(r => r.json())
-            .then(data => {
-                div_tab.innerHTML = "";
+    // 2. FUNÇÃO PARA CARREGAR (NOMES PROTEGIDOS CONTRA TRADUÇÃO)
+    async function loadProducts() {
+        try {
+            const response = await fetch(URL_SISTEMA);
+            const data = await response.json();
+            
+            if (tb_corpo) {
+                tb_corpo.innerHTML = "";
                 data.forEach(item => {
                     const idSafe = item.normalize('NFD').replace(/[\u0300-\u036f]/g, "").replace(/\s+/g, '_');
-                    div_tab.innerHTML += `
-                        <tr class="border-b">
-                            <td class="p-3 font-bold uppercase text-xs">${item}</td>
-                            <td class="p-2"><input type="number" name="${idSafe}" class="w-full p-2 border rounded font-black text-center" placeholder="0"></td>
-                        </tr>`;
+                    const row = document.createElement('tr');
+                    row.className = "border-b";
+                    row.innerHTML = `
+                        <td class="p-3 font-bold uppercase text-[10px]">${item}</td>
+                        <td class="p-2"><input type="number" name="${idSafe}" class="w-full p-2 border rounded font-black text-center" placeholder="0"></td>
+                    `;
+                    tb_corpo.appendChild(row);
                 });
-            }).catch(e => { div_tab.innerHTML = "<tr><td colspan='2' class='p-4 text-red-500'>Erro ao conectar com a planilha.</td></tr>"; });
+            }
+        } catch (e) {
+            if(tb_corpo) tb_corpo.innerHTML = "<tr><td colspan='2' class='p-4 text-red-500 text-center font-bold'>Erro na conexão com a planilha.</td></tr>";
+        }
+    }
 
-        // Enviar dados
-        document.getElementById('f_main').addEventListener('submit', function(e) {
+    loadProducts();
+
+    // 3. ENVIO DOS DADOS
+    const form_claf = document.getElementById('f_main');
+    if(form_claf) {
+        form_claf.addEventListener('submit', async function(e) {
             e.preventDefault();
-            const b = document.getElementById('f_btn');
-            const fd = new URLSearchParams();
-            fd.append('nome', document.getElementById('f_nome').value);
-            fd.append('data', document.getElementById('f_data').value);
+            const btn = document.getElementById('f_btn');
+            const params = new URLSearchParams();
+            params.append('nome', document.getElementById('f_nome').value);
+            params.append('data', document.getElementById('f_data').value);
 
-            const ins = this.querySelectorAll('input[type="number"]');
-            let hasData = false;
-            ins.forEach(i => {
+            const inputs = this.querySelectorAll('input[type="number"]');
+            let filled = false;
+            inputs.forEach(i => {
                 if(i.value > 0) {
-                    fd.append(i.name, i.value);
-                    hasData = true;
+                    params.append(i.name, i.value);
+                    filled = true;
                 }
             });
 
-            if(!hasData) return alert("Coloque a quantidade em algum produto.");
+            if(!filled) return alert("Por favor, preencha pelo menos uma quantidade.");
 
-            b.disabled = true;
-            b.innerText = "ENVIANDO...";
+            btn.disabled = true;
+            btn.innerText = "ENVIANDO...";
 
-            fetch(URL_WEBAPP, { method: 'POST', mode: 'no-cors', body: fd })
-                .then(() => {
-                    alert("PEDIDO ENVIADO COM SUCESSO!");
-                    location.reload();
-                }).catch(() => {
-                    alert("Erro no envio.");
-                    b.disabled = false;
-                    b.innerText = "ENVIAR PEDIDO";
-                });
+            try {
+                await fetch(URL_SISTEMA, { method: 'POST', mode: 'no-cors', body: params });
+                alert("PEDIDO ENVIADO COM SUCESSO!");
+                location.reload();
+            } catch (err) {
+                alert("Erro ao enviar. Verifique sua internet.");
+                btn.disabled = false;
+                btn.innerText = "ENVIAR PEDIDO";
+            }
         });
-    </script>
-</body>
-</html>
+    }
+</script>
