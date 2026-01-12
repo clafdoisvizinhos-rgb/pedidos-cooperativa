@@ -3,27 +3,27 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>CLAF - Pedidos</title>
+    <title>CLAF Pedidos</title>
     <script src="https://cdn.tailwindcss.com"></script>
 </head>
 <body class="bg-gray-200">
-    <div class="max-w-md mx-auto bg-white min-h-screen shadow-lg" id="app-container">
+    <div class="max-w-md mx-auto bg-white min-h-screen shadow-lg">
         <div class="bg-green-800 p-6 text-center text-white">
             <h1 class="text-4xl font-black text-yellow-400">CLAF</h1>
             <p class="text-xs font-bold uppercase">Cooperativa Familiar</p>
         </div>
 
         <form id="mainForm" class="p-4 space-y-4">
-            <input type="text" id="nomeUser" placeholder="NOME DO PRODUTOR" class="w-full p-4 border-2 rounded-lg font-bold" required>
+            <input type="text" id="nomeUser" placeholder="NOME DO PRODUTOR" class="w-full p-4 border-2 rounded-lg font-bold uppercase" required>
             <input type="date" id="dataHoje" class="w-full p-4 border-2 rounded-lg font-bold" required>
 
             <div class="border-2 rounded-lg bg-white">
-                <table class="w-full">
+                <table class="w-full text-sm">
                     <thead class="bg-gray-100">
-                        <tr><th class="p-2 text-left text-xs">PRODUTO</th><th class="p-2 text-center w-24 text-xs">QTD</th></tr>
+                        <tr><th class="p-2 text-left">PRODUTO</th><th class="p-2 text-center w-24">QTD</th></tr>
                     </thead>
                     <tbody id="tabelaCorpo">
-                        <tr><td colspan="2" class="p-8 text-center animate-pulse">Buscando produtos...</td></tr>
+                        <tr><td colspan="2" class="p-8 text-center">Buscando lista...</td></tr>
                     </tbody>
                 </table>
             </div>
@@ -32,29 +32,32 @@
     </div>
 
     <script>
-        // MUDAR APENAS ESTA LINHA:
-        const URL_SCRIPT = "https://script.google.com/macros/s/AKfycby-8Sx6-7WHVMhUHJ6DDK_GbJpD6b5Zlmx30tR6h5vjeBw2lCmUf3ckKUG6vYf8MjrX/exec";
+        // MUDAR APENAS A URL ABAIXO
+        const URL_SCRIPT = "COLE_AQUI_A_URL_DO_WEB_APP";
 
         const corpo = document.getElementById('tabelaCorpo');
-        document.getElementById('dataHoje').value = new Date().toISOString().split('T')[0];
+        const campoData = document.getElementById('dataHoje');
+        if(campoData) campoData.value = new Date().toISOString().split('T')[0];
 
         // Carregar Produtos
-        fetch(URL_SCRIPT)
-            .then(res => res.json())
-            .then(produtos => {
-                corpo.innerHTML = "";
-                produtos.forEach(p => {
-                    const id = p.normalize('NFD').replace(/[\u0300-\u036f]/g, "").replace(/\s+/g, '_');
-                    corpo.innerHTML += `
-                        <tr class="border-b">
-                            <td class="p-3 font-bold uppercase text-[10px]">${p}</td>
-                            <td class="p-2"><input type="number" name="${id}" class="w-full p-2 border rounded font-black text-center" placeholder="0"></td>
-                        </tr>`;
+        if (URL_SCRIPT !== "COLE_AQUI_A_URL_DO_WEB_APP") {
+            fetch(URL_SCRIPT)
+                .then(res => res.json())
+                .then(produtos => {
+                    corpo.innerHTML = "";
+                    produtos.forEach(p => {
+                        const id = p.normalize('NFD').replace(/[\u0300-\u036f]/g, "").replace(/\s+/g, '_');
+                        corpo.innerHTML += `
+                            <tr class="border-b">
+                                <td class="p-3 font-bold uppercase text-[10px]">${p}</td>
+                                <td class="p-2"><input type="number" name="${id}" class="w-full p-2 border rounded font-black text-center" placeholder="0"></td>
+                            </tr>`;
+                    });
+                })
+                .catch(err => {
+                    corpo.innerHTML = "<tr><td colspan='2' class='p-4 text-red-500 font-bold'>Erro ao carregar lista. Verifique a URL.</td></tr>";
                 });
-            })
-            .catch(err => {
-                corpo.innerHTML = "<tr><td colspan='2' class='p-4 text-red-500 font-bold'>ERRO: Link do Google Script inválido ou permissão negada.</td></tr>";
-            });
+        }
 
         // Enviar Dados
         document.getElementById('mainForm').addEventListener('submit', function(e) {
@@ -72,18 +75,18 @@
                 }
             });
 
-            if(!temDados) return alert("Selecione a quantidade de algum produto!");
+            if(!temDados) return alert("Insira uma quantidade!");
 
             btn.disabled = true;
             btn.innerText = "ENVIANDO...";
 
             fetch(URL_SCRIPT, { method: 'POST', mode: 'no-cors', body: params })
                 .then(() => {
-                    alert("✅ PEDIDO ENVIADO COM SUCESSO!");
+                    alert("✅ PEDIDO ENVIADO!");
                     location.reload();
                 })
                 .catch(() => {
-                    alert("❌ Erro ao enviar. Tente novamente.");
+                    alert("❌ Erro no envio.");
                     btn.disabled = false;
                     btn.innerText = "ENVIAR PEDIDO";
                 });
