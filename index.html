@@ -1,70 +1,93 @@
-<script>
-    // 1. COLOQUE SUA URL ENTRE AS ASPAS ABAIXO
-    const URL_SISTEMA = "https://script.google.com/macros/s/AKfycby-8Sx6-7WHVMhUHJ6DDK_GbJpD6b5Zlmx30tR6h5vjeBw2lCmUf3ckKUG6vYf8MjrX/exec";
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CLAF - Pedidos</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-200">
+    <div class="max-w-md mx-auto bg-white min-h-screen shadow-lg" id="app-container">
+        <div class="bg-green-800 p-6 text-center text-white">
+            <h1 class="text-4xl font-black text-yellow-400">CLAF</h1>
+            <p class="text-xs font-bold uppercase">Cooperativa Familiar</p>
+        </div>
 
-    const tb_corpo = document.getElementById('f_tabela');
-    const campo_data = document.getElementById('f_data');
-    if(campo_data) campo_data.value = new Date().toISOString().split('T')[0];
+        <form id="mainForm" class="p-4 space-y-4">
+            <input type="text" id="nomeUser" placeholder="NOME DO PRODUTOR" class="w-full p-4 border-2 rounded-lg font-bold" required>
+            <input type="date" id="dataHoje" class="w-full p-4 border-2 rounded-lg font-bold" required>
 
-    // 2. FUNÇÃO PARA CARREGAR (NOMES PROTEGIDOS CONTRA TRADUÇÃO)
-    async function loadProducts() {
-        try {
-            const response = await fetch(URL_SISTEMA);
-            const data = await response.json();
-            
-            if (tb_corpo) {
-                tb_corpo.innerHTML = "";
-                data.forEach(item => {
-                    const idSafe = item.normalize('NFD').replace(/[\u0300-\u036f]/g, "").replace(/\s+/g, '_');
-                    const row = document.createElement('tr');
-                    row.className = "border-b";
-                    row.innerHTML = `
-                        <td class="p-3 font-bold uppercase text-[10px]">${item}</td>
-                        <td class="p-2"><input type="number" name="${idSafe}" class="w-full p-2 border rounded font-black text-center" placeholder="0"></td>
-                    `;
-                    tb_corpo.appendChild(row);
+            <div class="border-2 rounded-lg bg-white">
+                <table class="w-full">
+                    <thead class="bg-gray-100">
+                        <tr><th class="p-2 text-left text-xs">PRODUTO</th><th class="p-2 text-center w-24 text-xs">QTD</th></tr>
+                    </thead>
+                    <tbody id="tabelaCorpo">
+                        <tr><td colspan="2" class="p-8 text-center animate-pulse">Buscando produtos...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+            <button type="submit" id="btnEnviar" class="w-full bg-green-600 text-white p-5 rounded-xl font-black text-xl shadow-md">ENVIAR PEDIDO</button>
+        </form>
+    </div>
+
+    <script>
+        // MUDAR APENAS ESTA LINHA:
+        const URL_SCRIPT = "https://script.google.com/macros/s/AKfycby-8Sx6-7WHVMhUHJ6DDK_GbJpD6b5Zlmx30tR6h5vjeBw2lCmUf3ckKUG6vYf8MjrX/exec";
+
+        const corpo = document.getElementById('tabelaCorpo');
+        document.getElementById('dataHoje').value = new Date().toISOString().split('T')[0];
+
+        // Carregar Produtos
+        fetch(URL_SCRIPT)
+            .then(res => res.json())
+            .then(produtos => {
+                corpo.innerHTML = "";
+                produtos.forEach(p => {
+                    const id = p.normalize('NFD').replace(/[\u0300-\u036f]/g, "").replace(/\s+/g, '_');
+                    corpo.innerHTML += `
+                        <tr class="border-b">
+                            <td class="p-3 font-bold uppercase text-[10px]">${p}</td>
+                            <td class="p-2"><input type="number" name="${id}" class="w-full p-2 border rounded font-black text-center" placeholder="0"></td>
+                        </tr>`;
                 });
-            }
-        } catch (e) {
-            if(tb_corpo) tb_corpo.innerHTML = "<tr><td colspan='2' class='p-4 text-red-500 text-center font-bold'>Erro na conexão com a planilha.</td></tr>";
-        }
-    }
+            })
+            .catch(err => {
+                corpo.innerHTML = "<tr><td colspan='2' class='p-4 text-red-500 font-bold'>ERRO: Link do Google Script inválido ou permissão negada.</td></tr>";
+            });
 
-    loadProducts();
-
-    // 3. ENVIO DOS DADOS
-    const form_claf = document.getElementById('f_main');
-    if(form_claf) {
-        form_claf.addEventListener('submit', async function(e) {
+        // Enviar Dados
+        document.getElementById('mainForm').addEventListener('submit', function(e) {
             e.preventDefault();
-            const btn = document.getElementById('f_btn');
+            const btn = document.getElementById('btnEnviar');
             const params = new URLSearchParams();
-            params.append('nome', document.getElementById('f_nome').value);
-            params.append('data', document.getElementById('f_data').value);
+            params.append('nome', document.getElementById('nomeUser').value);
+            params.append('data', document.getElementById('dataHoje').value);
 
-            const inputs = this.querySelectorAll('input[type="number"]');
-            let filled = false;
-            inputs.forEach(i => {
+            let temDados = false;
+            this.querySelectorAll('input[type="number"]').forEach(i => {
                 if(i.value > 0) {
                     params.append(i.name, i.value);
-                    filled = true;
+                    temDados = true;
                 }
             });
 
-            if(!filled) return alert("Por favor, preencha pelo menos uma quantidade.");
+            if(!temDados) return alert("Selecione a quantidade de algum produto!");
 
             btn.disabled = true;
             btn.innerText = "ENVIANDO...";
 
-            try {
-                await fetch(URL_SISTEMA, { method: 'POST', mode: 'no-cors', body: params });
-                alert("PEDIDO ENVIADO COM SUCESSO!");
-                location.reload();
-            } catch (err) {
-                alert("Erro ao enviar. Verifique sua internet.");
-                btn.disabled = false;
-                btn.innerText = "ENVIAR PEDIDO";
-            }
+            fetch(URL_SCRIPT, { method: 'POST', mode: 'no-cors', body: params })
+                .then(() => {
+                    alert("✅ PEDIDO ENVIADO COM SUCESSO!");
+                    location.reload();
+                })
+                .catch(() => {
+                    alert("❌ Erro ao enviar. Tente novamente.");
+                    btn.disabled = false;
+                    btn.innerText = "ENVIAR PEDIDO";
+                });
         });
-    }
-</script>
+    </script>
+</body>
+</html>
