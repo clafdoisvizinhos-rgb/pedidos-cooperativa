@@ -3,95 +3,87 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>CLAF - Pedidos</title>
+    <title>CLAF Pedidos</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
 </head>
-<body class="bg-gray-100 min-h-screen">
-    <div class="max-w-[360px] mx-auto bg-white min-h-screen shadow-lg">
-        <div class="bg-green-700 p-6 text-center text-white">
-            <h1 class="text-4xl font-black text-yellow-400">CLAF</h1>
-            <p class="text-xs uppercase">Cooperativa Familiar</p>
+<body class="bg-gray-200">
+    <div class="max-w-md mx-auto bg-white min-h-screen">
+        <div class="bg-green-800 p-8 text-center text-white">
+            <h1 class="text-5xl font-black text-yellow-400">CLAF</h1>
+            <p class="font-bold">COOPERATIVA FAMILIAR</p>
         </div>
 
-        <form id="formPrincipal" class="p-4 space-y-4">
-            <div class="space-y-2">
-                <input type="text" id="produtorNome" placeholder="NOME DO PRODUTOR" class="w-full p-3 border rounded-lg font-bold uppercase" required>
-                <input type="date" id="dataPedido" class="w-full p-3 border rounded-lg font-bold" required>
-            </div>
+        <form id="f_main" class="p-4 space-y-4">
+            <input type="text" id="f_nome" placeholder="NOME DO PRODUTOR" class="w-full p-4 border-2 rounded-lg font-bold" required>
+            <input type="date" id="f_data" class="w-full p-4 border-2 rounded-lg font-bold" required>
 
-            <div class="border rounded-lg overflow-hidden">
-                <table class="w-full text-sm">
-                    <thead class="bg-gray-200">
-                        <tr><th class="p-2 text-left">PRODUTO</th><th class="p-2 text-center">QTD</th></tr>
+            <div class="border-2 rounded-lg">
+                <table class="w-full">
+                    <thead class="bg-gray-100">
+                        <tr><th class="p-2 text-left">PRODUTO</th><th class="p-2 text-center w-24">QTD</th></tr>
                     </thead>
-                    <tbody id="corpoTabela" class="divide-y">
-                        <tr><td colspan="2" class="p-4 text-center">Carregando produtos da planilha...</td></tr>
+                    <tbody id="f_tabela">
+                        <tr><td colspan="2" class="p-10 text-center">Buscando produtos...</td></tr>
                     </tbody>
                 </table>
             </div>
-
-            <button type="submit" id="botaoEnviar" class="w-full bg-green-600 text-white p-4 rounded-xl font-black text-lg">ENVIAR PEDIDO</button>
+            <button type="submit" id="f_btn" class="w-full bg-green-600 text-white p-6 rounded-xl font-black text-xl">ENVIAR PEDIDO</button>
         </form>
     </div>
 
-    <div id="msgSucesso" class="fixed inset-0 bg-black/80 hidden items-center justify-center z-50 p-4">
-        <div class="bg-white p-8 rounded-2xl text-center w-full max-w-xs">
-            <h2 class="text-2xl font-black text-green-700 mb-4">ENVIADO!</h2>
-            <button onclick="location.reload()" class="w-full bg-green-600 text-white p-3 rounded-lg font-bold">NOVO PEDIDO</button>
-        </div>
-    </div>
-
     <script>
-        // --- COLOQUE SUA URL ABAIXO ---
-        const urlScript = "https://script.google.com/macros/s/AKfycby-8Sx6-7WHVMhUHJ6DDK_GbJpD6b5Zlmx30tR6h5vjeBw2lCmUf3ckKUG6vYf8MjrX/exec";
+        // COLOQUE SUA URL ABAIXO ENTRE AS ASPAS
+        const URL_WEBAPP = "SUA_URL_AQUI";
 
-        const tabela = document.getElementById('corpoTabela');
-        document.getElementById('dataPedido').value = new Date().toISOString().split('T')[0];
+        const div_tab = document.getElementById('f_tabela');
+        document.getElementById('f_data').value = new Date().toISOString().split('T')[0];
 
-        // Carregar lista
-        fetch(urlScript)
-            .then(res => res.json())
-            .then(produtos => {
-                tabela.innerHTML = "";
-                produtos.forEach(nome => {
-                    const idSeguro = nome.normalize('NFD').replace(/[\u0300-\u036f]/g, "").replace(/\s+/g, '_');
-                    tabela.innerHTML += `
-                        <tr>
-                            <td class="p-2 font-bold uppercase text-[11px]">${nome}</td>
-                            <td class="p-1"><input type="number" name="${idSeguro}" class="w-full p-2 border rounded text-center font-bold" placeholder="0"></td>
+        // Carregar produtos
+        fetch(URL_WEBAPP)
+            .then(r => r.json())
+            .then(data => {
+                div_tab.innerHTML = "";
+                data.forEach(item => {
+                    const idSafe = item.normalize('NFD').replace(/[\u0300-\u036f]/g, "").replace(/\s+/g, '_');
+                    div_tab.innerHTML += `
+                        <tr class="border-b">
+                            <td class="p-3 font-bold uppercase text-xs">${item}</td>
+                            <td class="p-2"><input type="number" name="${idSafe}" class="w-full p-2 border rounded font-black text-center" placeholder="0"></td>
                         </tr>`;
                 });
-            }).catch(() => { tabela.innerHTML = "<tr><td colspan='2' class='p-4 text-red-500'>Erro ao carregar lista.</td></tr>"; });
+            }).catch(e => { div_tab.innerHTML = "<tr><td colspan='2' class='p-4 text-red-500'>Erro ao conectar com a planilha.</td></tr>"; });
 
-        // Enviar Form
-        document.getElementById('formPrincipal').addEventListener('submit', function(e) {
+        // Enviar dados
+        document.getElementById('f_main').addEventListener('submit', function(e) {
             e.preventDefault();
-            const btn = document.getElementById('botaoEnviar');
-            const dataEnvio = new URLSearchParams();
-            const itensPDF = [];
+            const b = document.getElementById('f_btn');
+            const fd = new URLSearchParams();
+            fd.append('nome', document.getElementById('f_nome').value);
+            fd.append('data', document.getElementById('f_data').value);
 
-            dataEnvio.append('nome', document.getElementById('produtorNome').value);
-            dataEnvio.append('data', document.getElementById('dataPedido').value);
-
-            const campos = this.querySelectorAll('input[type="number"]');
-            campos.forEach(input => {
-                if (input.value > 0) {
-                    dataEnvio.append(input.name, input.value);
-                    itensPDF.push({n: input.name.replace(/_/g, ' '), q: input.value});
+            const ins = this.querySelectorAll('input[type="number"]');
+            let hasData = false;
+            ins.forEach(i => {
+                if(i.value > 0) {
+                    fd.append(i.name, i.value);
+                    hasData = true;
                 }
             });
 
-            if (itensPDF.length === 0) return alert("Insira uma quantidade.");
+            if(!hasData) return alert("Coloque a quantidade em algum produto.");
 
-            btn.disabled = true;
-            btn.innerText = "ENVIANDO...";
+            b.disabled = true;
+            b.innerText = "ENVIANDO...";
 
-            fetch(urlScript, { method: 'POST', mode: 'no-cors', body: dataEnvio })
+            fetch(URL_WEBAPP, { method: 'POST', mode: 'no-cors', body: fd })
                 .then(() => {
-                    document.getElementById('msgSucesso').classList.remove('hidden');
-                    document.getElementById('msgSucesso').classList.add('flex');
-                }).catch(() => alert("Erro ao enviar."));
+                    alert("PEDIDO ENVIADO COM SUCESSO!");
+                    location.reload();
+                }).catch(() => {
+                    alert("Erro no envio.");
+                    b.disabled = false;
+                    b.innerText = "ENVIAR PEDIDO";
+                });
         });
     </script>
 </body>
