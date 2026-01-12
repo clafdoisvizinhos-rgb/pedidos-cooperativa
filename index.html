@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>CLAF Pedidos</title>
+    <title>CLAF - Pedidos</title>
     <script src="https://cdn.tailwindcss.com"></script>
 </head>
 <body class="bg-gray-200">
@@ -13,82 +13,80 @@
             <p class="text-xs font-bold uppercase">Cooperativa Familiar</p>
         </div>
 
-        <form id="mainForm" class="p-4 space-y-4">
-            <input type="text" id="nomeUser" placeholder="NOME DO PRODUTOR" class="w-full p-4 border-2 rounded-lg font-bold uppercase" required>
-            <input type="date" id="dataHoje" class="w-full p-4 border-2 rounded-lg font-bold" required>
+        <form id="form_claf" class="p-4 space-y-4">
+            <input type="text" id="id_nome" placeholder="NOME DO PRODUTOR" class="w-full p-4 border-2 rounded-lg font-bold uppercase" required>
+            <input type="date" id="id_data" class="w-full p-4 border-2 rounded-lg font-bold" required>
 
             <div class="border-2 rounded-lg bg-white">
-                <table class="w-full text-sm">
-                    <thead class="bg-gray-100">
+                <table class="w-full">
+                    <thead class="bg-gray-100 text-xs">
                         <tr><th class="p-2 text-left">PRODUTO</th><th class="p-2 text-center w-24">QTD</th></tr>
                     </thead>
-                    <tbody id="tabelaCorpo">
-                        <tr><td colspan="2" class="p-8 text-center">Buscando lista...</td></tr>
+                    <tbody id="id_corpo">
+                        <tr><td colspan="2" class="p-8 text-center animate-pulse">Buscando produtos...</td></tr>
                     </tbody>
                 </table>
             </div>
-            <button type="submit" id="btnEnviar" class="w-full bg-green-600 text-white p-5 rounded-xl font-black text-xl shadow-md">ENVIAR PEDIDO</button>
+            <button type="submit" id="id_btn" class="w-full bg-green-600 text-white p-5 rounded-xl font-black text-xl">ENVIAR PEDIDO</button>
         </form>
     </div>
 
     <script>
-        // MUDAR APENAS A URL ABAIXO
-        const URL_SCRIPT = "COLE_AQUI_A_URL_DO_WEB_APP";
+        // COLE SUA URL AQUI:
+        const CLAF_URL = "https://script.google.com/macros/s/AKfycby-8Sx6-7WHVMhUHJ6DDK_GbJpD6b5Zlmx30tR6h5vjeBw2lCmUf3ckKUG6vYf8MjrX/exec";
 
-        const corpo = document.getElementById('tabelaCorpo');
-        const campoData = document.getElementById('dataHoje');
-        if(campoData) campoData.value = new Date().toISOString().split('T')[0];
+        const div_tabela = document.getElementById('id_corpo');
+        const input_data = document.getElementById('id_data');
+        if(input_data) input_data.value = new Date().toISOString().split('T')[0];
 
         // Carregar Produtos
-        if (URL_SCRIPT !== "COLE_AQUI_A_URL_DO_WEB_APP") {
-            fetch(URL_SCRIPT)
-                .then(res => res.json())
-                .then(produtos => {
-                    corpo.innerHTML = "";
-                    produtos.forEach(p => {
-                        const id = p.normalize('NFD').replace(/[\u0300-\u036f]/g, "").replace(/\s+/g, '_');
-                        corpo.innerHTML += `
-                            <tr class="border-b">
-                                <td class="p-3 font-bold uppercase text-[10px]">${p}</td>
-                                <td class="p-2"><input type="number" name="${id}" class="w-full p-2 border rounded font-black text-center" placeholder="0"></td>
-                            </tr>`;
-                    });
-                })
-                .catch(err => {
-                    corpo.innerHTML = "<tr><td colspan='2' class='p-4 text-red-500 font-bold'>Erro ao carregar lista. Verifique a URL.</td></tr>";
+        fetch(CLAF_URL)
+            .then(r => r.json())
+            .then(p_list => {
+                div_tabela.innerHTML = "";
+                p_list.forEach(item => {
+                    const clean_id = item.normalize('NFD').replace(/[\u0300-\u036f]/g, "").replace(/\s+/g, '_');
+                    div_tabela.innerHTML += `
+                        <tr class="border-b">
+                            <td class="p-3 font-bold uppercase text-[10px]">${item}</td>
+                            <td class="p-2"><input type="number" name="${clean_id}" class="w-full p-2 border rounded font-black text-center" placeholder="0"></td>
+                        </tr>`;
                 });
-        }
+            })
+            .catch(() => {
+                div_tabela.innerHTML = "<tr><td colspan='2' class='p-4 text-red-500 font-bold text-center uppercase'>Erro ao carregar lista da planilha.</td></tr>";
+            });
 
         // Enviar Dados
-        document.getElementById('mainForm').addEventListener('submit', function(e) {
+        document.getElementById('form_claf').addEventListener('submit', function(e) {
             e.preventDefault();
-            const btn = document.getElementById('btnEnviar');
-            const params = new URLSearchParams();
-            params.append('nome', document.getElementById('nomeUser').value);
-            params.append('data', document.getElementById('dataHoje').value);
+            const b = document.getElementById('id_btn');
+            const fd = new URLSearchParams();
+            fd.append('nome', document.getElementById('id_nome').value);
+            fd.append('data', document.getElementById('id_data').value);
 
-            let temDados = false;
+            let has_q = false;
             this.querySelectorAll('input[type="number"]').forEach(i => {
                 if(i.value > 0) {
-                    params.append(i.name, i.value);
-                    temDados = true;
+                    fd.append(i.name, i.value);
+                    has_q = true;
                 }
             });
 
-            if(!temDados) return alert("Insira uma quantidade!");
+            if(!has_q) return alert("Selecione a quantidade de algum produto!");
 
-            btn.disabled = true;
-            btn.innerText = "ENVIANDO...";
+            b.disabled = true;
+            b.innerText = "ENVIANDO...";
 
-            fetch(URL_SCRIPT, { method: 'POST', mode: 'no-cors', body: params })
+            fetch(CLAF_URL, { method: 'POST', mode: 'no-cors', body: fd })
                 .then(() => {
-                    alert("✅ PEDIDO ENVIADO!");
+                    alert("PEDIDO ENVIADO!");
                     location.reload();
                 })
                 .catch(() => {
-                    alert("❌ Erro no envio.");
-                    btn.disabled = false;
-                    btn.innerText = "ENVIAR PEDIDO";
+                    alert("Erro no envio.");
+                    b.disabled = false;
+                    b.innerText = "ENVIAR PEDIDO";
                 });
         });
     </script>
