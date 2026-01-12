@@ -1,49 +1,194 @@
-<script>
-    // URL do seu Script (Copie a URL da Implantação do Web App)
-    const scriptURL = "https://script.google.com/macros/s/AKfycby-8Sx6-7WHVMhUHJ6DDK_GbJpD6b5Zlmx30tR6h5vjeBw2lCmUf3ckKUG6vYf8MjrX/exec";
+<!DOCTYPE html>
+<html lang="pt-PT">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Cooperativa Familiar - Pedidos</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Courier+Prime:wght@400;700&display=swap');
+        .fonte-cupom { font-family: 'Courier Prime', monospace; }
+        .cabecalho-tabela { background-color: #ffff00; }
+        input[type="number"] { -moz-appearance: textfield; appearance: textfield; }
+        input[type="number"]::-webkit-inner-spin-button, input[type="number"]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+        input { color: #000 !important; }
+        @keyframes pop { 0% { transform: scale(0.8); opacity: 0; } 100% { transform: scale(1); opacity: 1; } }
+        .animate-pop { animation: pop 0.3s ease-out forwards; }
+        .btn-shadow { box-shadow: 0 4px 0 rgb(21, 128, 61); }
+        .btn-shadow:active { box-shadow: none; transform: translateY(2px); }
+        #wrapper-pdf { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #ffffff; display: none; flex-direction: column; align-items: center; justify-content: flex-start; padding-top: 20px; z-index: 99999; }
+        #conteudoPdfExport { background: white; width: 76mm; padding: 4mm; border: none; }
+    </style>
+</head>
+<body class="bg-gray-100 min-h-screen pb-6 font-sans">
 
-    document.getElementById('campoData').value = new Date().toISOString().split('T')[0];
-    const tbody = document.getElementById('listaProdutos');
+    <div class="max-w-[360px] mx-auto bg-white min-h-screen shadow-xl border-x border-gray-200 relative z-10">
+        <div class="bg-green-700 p-6 text-white text-center shadow-sm">
+            <h1 class="text-xl font-bold uppercase tracking-tight italic opacity-90">Cooperativa</h1>
+            <h2 class="text-5xl font-black uppercase tracking-tighter text-yellow-400 -mt-1">CLAF</h2>
+            <div class="mt-2 h-1 w-16 bg-white mx-auto opacity-50"></div>
+            <p class="text-[9px] font-bold opacity-80 mt-2 uppercase tracking-widest">Sistema de Entrega</p>
+        </div>
 
-    // FUNÇÃO PARA CARREGAR PRODUTOS DA PLANILHA
-    async function carregarProdutos() {
-        try {
-            // Buscamos a lista do Apps Script
-            const response = await fetch(scriptURL);
-            const produtosPlanilha = await response.json();
-            
-            tbody.innerHTML = ""; // Limpa antes de carregar
+        <form id="meuFormulario" class="p-3 space-y-4">
+            <div class="grid grid-cols-2 gap-2 bg-gray-50 p-3 rounded-lg border border-gray-300">
+                <div class="col-span-2">
+                    <label class="block text-[10px] font-black text-gray-700 mb-0.5 uppercase italic">1. Nome do produtor</label>
+                    <input type="text" name="nome" id="inputNome" class="w-full p-2 border border-gray-300 rounded focus:border-green-600 outline-none text-sm font-bold text-black" placeholder="O seu nome" required>
+                </div>
+                <div class="col-span-2">
+                    <label class="block text-[10px] font-black text-gray-700 mb-0.5 uppercase italic">2. Data</label>
+                    <input type="date" name="data" id="campoData" class="w-full p-2 border border-gray-300 rounded focus:border-green-600 outline-none text-sm font-bold text-black" required>
+                </div>
+            </div>
 
-            produtosPlanilha.forEach((prod, index) => {
-                const tr = document.createElement('tr');
-                tr.className = "item-row border-b border-gray-100";
-                
-                // Normalização idêntica à que você já usava
-                const idPlanilha = prod.normalize('NFD').replace(/[\u0300-\u036f]/g, "").replace(/\s+/g, '_');
-                
-                tr.innerHTML = `
-                    <td class="p-2">
-                        <label class="flex items-center gap-2 cursor-pointer select-none">
-                            <input type="checkbox" id="check_${index}" class="w-4 h-4 rounded border-gray-300 text-green-600">
-                            <span class="text-[11px] font-bold text-gray-800 uppercase tracking-tighter">${prod}</span>
-                        </label>
-                    </td>
-                    <td class="p-1">
-                        <input type="number" name="${idPlanilha}" min="0" step="any" inputmode="decimal"
-                               class="w-full p-1.5 border border-gray-200 rounded text-center text-sm font-black bg-gray-50 outline-none text-black"
-                               placeholder="0"
-                               oninput="document.getElementById('check_${index}').checked = (this.value > 0)">
-                    </td>
-                `;
-                tbody.appendChild(tr);
-            });
-        } catch (err) {
-            console.error("Erro ao carregar produtos:", err);
-            tbody.innerHTML = "<tr><td colspan='2' class='p-4 text-red-500'>Erro ao carregar lista de produtos.</td></tr>";
+            <div class="border border-black rounded overflow-hidden bg-white">
+                <table class="w-full border-collapse fonte-cupom">
+                    <thead>
+                        <tr class="cabecalho-tabela">
+                            <th class="border-b border-black p-2 text-[10px] font-black uppercase text-left w-2/3">PRODUTO</th>
+                            <th class="border-b border-black p-2 text-[10px] font-black uppercase text-center w-1/3">QTD.</th>
+                        </tr>
+                    </thead>
+                    <tbody id="listaProdutos" class="divide-y divide-gray-100">
+                        <tr><td colspan="2" class="p-4 text-center text-xs animate-pulse">Carregando lista da planilha...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="sticky bottom-2 pt-2">
+                <button type="submit" id="btnEnviar" class="w-full bg-green-600 hover:bg-green-700 text-white py-4 rounded-xl font-black text-lg btn-shadow transition-all transform uppercase flex items-center justify-center gap-2">
+                    <span>ENVIAR E SALVAR PDF</span>
+                    <span class="text-xl">➔</span>
+                </button>
+            </div>
+        </form>
+    </div>
+
+    <div id="wrapper-pdf">
+        <div class="mb-4 text-green-700 font-black text-sm animate-pulse">A PREPARAR CUPOM...</div>
+        <div id="conteudoPdfExport" class="fonte-cupom">
+            <div style="text-align: center; border-bottom: 2px dashed black; padding-bottom: 10px; margin-bottom: 10px;">
+                <h2 style="margin: 0; font-size: 16px; color: black; font-weight: bold;">COOPERATIVA CLAF</h2>
+                <p style="margin: 0; font-size: 9px; text-transform: uppercase; color: black;">Recibo de Pedido</p>
+            </div>
+            <p style="margin: 3px 0; color: black; font-size: 11px;"><strong>PRODUTOR:</strong> <span id="pdfNome"></span></p>
+            <p style="margin: 3px 0; color: black; font-size: 11px;"><strong>DATA:</strong> <span id="pdfData"></span></p>
+            <div style="border-bottom: 1px solid black; margin: 5px 0;"></div>
+            <table style="width: 100%; border-collapse: collapse; color: black;">
+                <thead>
+                    <tr style="border-bottom: 1px solid black;">
+                        <th style="text-align: left; padding: 2px 0; font-size: 10px;">PRODUTO</th>
+                        <th style="text-align: right; padding: 2px 0; font-size: 10px;">QTD</th>
+                    </tr>
+                </thead>
+                <tbody id="pdfItens"></tbody>
+            </table>
+            <div style="margin-top: 10px; border-top: 2px dashed black; padding-top: 10px; text-align: center;">
+                <p style="font-size: 8px; margin: 0; color: black;">Emitido em: <span id="pdfTimestamp"></span></p>
+                <p style="font-size: 11px; font-weight: bold; margin-top: 3px; color: black;">Cooperativa CLAF agradece!</p>
+            </div>
+        </div>
+    </div>
+
+    <div id="modalSucesso" class="fixed inset-0 bg-black/80 hidden items-center justify-center p-4 z-50">
+        <div class="bg-white p-6 rounded-2xl text-center max-w-[280px] w-full border-4 border-green-500 shadow-2xl animate-pop">
+            <div class="w-14 h-14 bg-green-100 text-green-600 rounded-full flex items-center justify-center mx-auto mb-3 text-3xl font-bold">✓</div>
+            <h2 class="text-xl font-black text-green-700 uppercase mb-1">Pedido Enviado!</h2>
+            <button onclick="location.reload()" class="w-full bg-green-600 text-white py-3 rounded-lg font-black uppercase text-xs">NOVO PEDIDO</button>
+        </div>
+    </div>
+
+    <script>
+        // COLE SUA URL AQUI ENTRE AS ASPAS
+        const scriptURL = "COLE_AQUI_A_URL_DO_SEU_WEBAPP";
+
+        const tbody = document.getElementById('listaProdutos');
+        document.getElementById('campoData').value = new Date().toISOString().split('T')[0];
+
+        // 1. CARREGA PRODUTOS DA PLANILHA
+        async function carregarProdutos() {
+            try {
+                const response = await fetch(scriptURL);
+                const produtos = await response.json();
+                tbody.innerHTML = "";
+                produtos.forEach((prod, index) => {
+                    const idCol = prod.normalize('NFD').replace(/[\u0300-\u036f]/g, "").replace(/\s+/g, '_');
+                    const tr = document.createElement('tr');
+                    tr.className = "border-b border-gray-100";
+                    tr.innerHTML = `
+                        <td class="p-2">
+                            <label class="flex items-center gap-2 cursor-pointer">
+                                <input type="checkbox" id="check_${index}" class="w-4 h-4 text-green-600">
+                                <span class="text-[11px] font-bold uppercase">${prod}</span>
+                            </label>
+                        </td>
+                        <td class="p-1">
+                            <input type="number" name="${idCol}" min="0" step="any" class="w-full p-1.5 border rounded text-center font-black" placeholder="0"
+                                   oninput="document.getElementById('check_${index}').checked = (this.value > 0)">
+                        </td>
+                    `;
+                    tbody.appendChild(tr);
+                });
+            } catch (e) {
+                tbody.innerHTML = "<tr><td colspan='2' class='p-4 text-red-500'>Erro ao carregar lista.</td></tr>";
+            }
         }
-    }
+        carregarProdutos();
 
-    // Chama a função ao abrir a página
-    carregarProdutos();
+        // 2. ENVIO DO FORMULÁRIO
+        document.getElementById('meuFormulario').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            const btn = document.getElementById('btnEnviar');
+            const params = new URLSearchParams();
+            const itensParaPDF = [];
 
-    // --- MANTENHA O RESTANTE DO SEU CÓDIGO (gerarPDF e o EventListener do Submit) EXATAMENTE COMO ESTÁ ---
+            params.append('nome', document.getElementById('inputNome').value);
+            params.append('data', document.getElementById('campoData').value);
+            params.append('timestamp', new Date().toLocaleString('pt-BR'));
+
+            const inputs = this.querySelectorAll('input[type="number"]');
+            inputs.forEach(input => {
+                if (input.value && parseFloat(input.value) > 0) {
+                    params.append(input.name, input.value);
+                    itensParaPDF.push({ nome: input.name.replace(/_/g, ' '), qtd: input.value });
+                }
+            });
+
+            if (itensParaPDF.length === 0) return alert("Selecione ao menos um produto.");
+
+            btn.disabled = true;
+            btn.innerHTML = "ENVIANDO...";
+
+            try {
+                await fetch(scriptURL, { method: 'POST', mode: 'no-cors', body: params });
+                await gerarPDF(document.getElementById('inputNome').value, document.getElementById('campoData').value, itensParaPDF);
+                document.getElementById('modalSucesso').classList.remove('hidden');
+                document.getElementById('modalSucesso').classList.add('flex');
+            } catch (err) {
+                alert("Erro ao enviar.");
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = "ENVIAR E SALVAR PDF ➔";
+            }
+        });
+
+        async function gerarPDF(nome, data, itens) {
+            const wrapper = document.getElementById('wrapper-pdf');
+            document.getElementById('pdfNome').innerText = nome.toUpperCase();
+            document.getElementById('pdfData').innerText = data;
+            document.getElementById('pdfTimestamp').innerText = new Date().toLocaleString('pt-BR');
+            const pdfTbody = document.getElementById('pdfItens');
+            pdfTbody.innerHTML = "";
+            itens.forEach(i => {
+                pdfTbody.innerHTML += `<tr style="border-bottom: 1px solid #eee"><td style="padding: 4px 0; font-size: 10px;">${i.nome}</td><td style="text-align: right; font-size: 10px;">${i.qtd}</td></tr>`;
+            });
+            wrapper.style.display = "flex";
+            const opt = { margin: 0, filename: 'pedido.pdf', image: { type: 'jpeg', quality: 0.98 }, html2canvas: { scale: 2 }, jsPDF: { unit: 'mm', format: [80, 200] } };
+            await html2pdf().set(opt).from(document.getElementById('conteudoPdfExport')).save();
+            wrapper.style.display = "none";
+        }
+    </script>
+</body>
+</html>
